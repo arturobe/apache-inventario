@@ -1083,34 +1083,390 @@
                     }
                     
                     modalBody.innerHTML = `
-                        <h3 style="color: #2d3748; margin-bottom: 15px;">Inventario Actual (${datos.total} unidades totales)</h3>
+                        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                            <button onclick="inventorySystem.mostrarSeccion('inventario', ${palletId})" class="btn-primary" style="flex: 1;">
+                                Ver Inventario (${datos.total})
+                            </button>
+                            <button onclick="inventorySystem.mostrarSeccion('agregar', ${palletId})" class="btn-primary" style="flex: 1;">
+                                Agregar Material
+                            </button>
+                            <button onclick="inventorySystem.mostrarSeccion('despachar', ${palletId})" class="btn-primary" style="flex: 1;">
+                                Despachar Material
+                            </button>
+                        </div>
                         
-                        <div style="max-height: 400px; overflow-y: auto;">
-                            ${datos.materiales.map((item, index) => `
-                                <div style="background: #f1f5f9; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #38a169;">
-                                    <div style="display: flex; justify-content: space-between; align-items: start;">
-                                        <div style="flex: 1;">
-                                            <strong style="color: #2d3748; font-size: 14px;">${item.descripcion || item.tipo}</strong><br>
-                                            <div style="color: #666; font-size: 12px; margin: 4px 0;">
-                                                <span style="background: #38a169; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;">
-                                                    ${item.cantidad} ${item.unidad || 'unidades'}
-                                                </span>
-                                                <span style="margin-left: 10px;">Proveedor: ${item.proveedor || 'N/A'}</span>
-                                            </div>
-                                            <small style="color: #999;">Recibido: ${new Date(item.fecha).toLocaleString()}</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')}
+                        <div id="seccion-contenido">
+                            ${this.generarSeccionInventario(datos)}
                         </div>
                     `;
                     
                     modal.classList.add('active');
-                    this.logInfo(`Modal P${palletId} abierto`);
+                    this.logInfo(`Modal P${palletId} abierto con múltiples funciones`);
                     
                 } catch (error) {
                     this.logError('Error abriendo modal', error);
                     this.mostrarErrorUsuario('No se pudo abrir el modal del pallet: ' + error.message);
+                }
+            }
+
+            mostrarSeccion(seccion, palletId) {
+                const contenido = document.getElementById('seccion-contenido');
+                if (!contenido) return;
+
+                const datos = this.inventario[palletId];
+                
+                switch(seccion) {
+                    case 'inventario':
+                        contenido.innerHTML = this.generarSeccionInventario(datos);
+                        break;
+                    case 'agregar':
+                        contenido.innerHTML = this.generarSeccionAgregar(palletId);
+                        break;
+                    case 'despachar':
+                        contenido.innerHTML = this.generarSeccionDespachar(datos, palletId);
+                        break;
+                }
+            }
+
+            generarSeccionInventario(datos) {
+                return `
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">Inventario Actual (${datos.total} unidades totales)</h3>
+                    
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        ${datos.materiales.map((item, index) => `
+                            <div style="background: #f1f5f9; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #38a169;">
+                                <div style="display: flex; justify-content: space-between; align-items: start;">
+                                    <div style="flex: 1;">
+                                        <strong style="color: #2d3748; font-size: 14px;">${item.descripcion || item.tipo}</strong><br>
+                                        <div style="color: #666; font-size: 12px; margin: 4px 0;">
+                                            <span style="background: #38a169; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;">
+                                                ${item.cantidad} ${item.unidad || 'unidades'}
+                                            </span>
+                                            <span style="margin-left: 10px;">Proveedor: ${item.proveedor || 'N/A'}</span>
+                                        </div>
+                                        <small style="color: #999;">Recibido: ${new Date(item.fecha).toLocaleString()}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            generarSeccionAgregar(palletId) {
+                return `
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">Agregar Material al Pallet P${palletId}</h3>
+                    
+                    <form id="form-agregar-material" style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                        <div class="form-group">
+                            <label>Tipo de Material:</label>
+                            <select id="tipo-agregar" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="Lamina">Lámina</option>
+                                <option value="Strap">Strap</option>
+                                <option value="Codo 90">Codo 90°</option>
+                                <option value="Codo 45">Codo 45°</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Circunferencia (pulgadas):</label>
+                                <input type="text" id="circunferencia-agregar" placeholder="12">
+                            </div>
+                            <div class="form-group">
+                                <label>Espesor (pulgadas):</label>
+                                <input type="text" id="espesor-agregar" placeholder="1.5">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Cantidad:</label>
+                                <input type="number" id="cantidad-agregar" placeholder="100" required min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Unidad:</label>
+                                <select id="unidad-agregar" required>
+                                    <option value="pies lineales">Pies lineales</option>
+                                    <option value="piezas">Piezas</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Proveedor:</label>
+                            <input type="text" id="proveedor-agregar" placeholder="Nombre del proveedor" required>
+                        </div>
+                        
+                        <button type="button" onclick="inventorySystem.procesarAgregarMaterial(${palletId})" class="btn-primary">
+                            Agregar Material al Pallet
+                        </button>
+                    </form>
+                `;
+            }
+
+            generarSeccionDespachar(datos, palletId) {
+                return `
+                    <h3 style="color: #2d3748; margin-bottom: 15px;">Despachar Material del Pallet P${palletId}</h3>
+                    
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                        <h4 style="margin-bottom: 15px;">Seleccionar materiales para despachar:</h4>
+                        
+                        ${datos.materiales.map((item, index) => `
+                            <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <div>
+                                        <strong style="color: #2d3748;">${item.descripcion || item.tipo}</strong><br>
+                                        <small style="color: #666;">
+                                            Stock actual: ${item.cantidad} ${item.unidad || 'unidades'} | ${item.proveedor || 'N/A'}
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                                    <label style="min-width: 120px;">Cantidad a despachar:</label>
+                                    <input type="number" 
+                                           id="despachar-${item.id}" 
+                                           min="0" 
+                                           max="${item.cantidad}" 
+                                           placeholder="0"
+                                           style="padding: 5px; border: 1px solid #cbd5e0; border-radius: 4px; width: 100px;">
+                                    <span style="color: #666;">de ${item.cantidad} disponibles</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                        
+                        <div style="margin-top: 20px; display: flex; gap: 10px;">
+                            <button onclick="inventorySystem.procesarDespachoMaterial(${palletId})" class="btn-primary" style="flex: 1;">
+                                Confirmar Despacho Parcial
+                            </button>
+                            <button onclick="inventorySystem.despacharTodoPallet(${palletId})" class="btn-danger" style="flex: 1;">
+                                Despachar Todo el Pallet
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async procesarAgregarMaterial(palletId) {
+                try {
+                    if (!this.supabase || !this.isOnline) {
+                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
+                        return;
+                    }
+
+                    const tipo = document.getElementById('tipo-agregar')?.value;
+                    const circunf = document.getElementById('circunferencia-agregar')?.value;
+                    const espesor = document.getElementById('espesor-agregar')?.value;
+                    const cantidad = parseInt(document.getElementById('cantidad-agregar')?.value);
+                    const unidad = document.getElementById('unidad-agregar')?.value;
+                    const proveedor = document.getElementById('proveedor-agregar')?.value || 'Sin especificar';
+                    
+                    if (!tipo || !cantidad || !unidad || !proveedor) {
+                        this.mostrarErrorUsuario('Por favor completa todos los campos obligatorios');
+                        return;
+                    }
+
+                    const { data: palletData, error: errorPallet } = await this.supabase
+                        .from('pallets')
+                        .select('id')
+                        .eq('numero', palletId)
+                        .single();
+
+                    if (errorPallet) throw errorPallet;
+
+                    let descripcion = tipo;
+                    if (circunf && espesor) {
+                        descripcion += ` - ${circunf}" x ${espesor}"`;
+                    }
+
+                    const { data: materialData, error: materialError } = await this.supabase
+                        .from('materiales')
+                        .insert({
+                            pallet_id: palletData.id,
+                            tipo: tipo,
+                            circunferencia: circunf,
+                            espesor: espesor,
+                            cantidad: cantidad,
+                            unidad: unidad,
+                            proveedor: proveedor,
+                            descripcion_completa: descripcion,
+                            usuario_registro: this.usuarioActual
+                        })
+                        .select()
+                        .single();
+
+                    if (materialError) throw materialError;
+
+                    await this.supabase
+                        .from('movimientos')
+                        .insert({
+                            material_id: materialData.id,
+                            tipo_movimiento: 'entrada',
+                            cantidad: cantidad,
+                            usuario: this.usuarioActual,
+                            observaciones: `Material agregado a P${palletId} - ${proveedor}`
+                        });
+
+                    if (!this.inventario[palletId]) {
+                        this.inventario[palletId] = {
+                            materiales: [],
+                            total: 0,
+                            created: new Date().toISOString(),
+                            lastUpdated: new Date().toISOString(),
+                            visible: true,
+                            posicion: { x: 50, y: 50 }
+                        };
+                    }
+
+                    this.inventario[palletId].materiales.push({
+                        id: materialData.id,
+                        tipo: tipo,
+                        circunferencia: circunf,
+                        espesor: espesor,
+                        cantidad: cantidad,
+                        unidad: unidad,
+                        proveedor: proveedor,
+                        descripcion: descripcion,
+                        fecha: materialData.fecha_recepcion
+                    });
+
+                    this.inventario[palletId].total = this.inventario[palletId].materiales.reduce((sum, m) => sum + m.cantidad, 0);
+                    this.inventario[palletId].lastUpdated = new Date().toISOString();
+                    
+                    this.mostrarSeccion('inventario', palletId);
+                    this.actualizarContadores();
+                    
+                    this.logInfo(`Material agregado a P${palletId}: ${descripcion} (${cantidad} ${unidad})`);
+                    
+                } catch (error) {
+                    this.logError('Error agregando material', error);
+                    this.mostrarErrorUsuario('Error al agregar material: ' + error.message);
+                }
+            }
+
+            async procesarDespachoMaterial(palletId) {
+                try {
+                    if (!this.supabase || !this.isOnline) {
+                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
+                        return;
+                    }
+
+                    const datos = this.inventario[palletId];
+                    if (!datos) return;
+
+                    let despachoRealizado = false;
+                    
+                    for (const material of datos.materiales) {
+                        const input = document.getElementById(`despachar-${material.id}`);
+                        if (!input) continue;
+                        
+                        const cantidadDespacho = parseInt(input.value) || 0;
+                        if (cantidadDespacho <= 0) continue;
+                        
+                        if (cantidadDespacho > material.cantidad) {
+                            this.mostrarErrorUsuario(`No puedes despachar ${cantidadDespacho} de ${material.descripcion}. Solo hay ${material.cantidad} disponibles.`);
+                            return;
+                        }
+                        
+                        const nuevaCantidad = material.cantidad - cantidadDespacho;
+                        
+                        if (nuevaCantidad === 0) {
+                            await this.supabase
+                                .from('materiales')
+                                .update({ activo: false })
+                                .eq('id', material.id);
+                        } else {
+                            await this.supabase
+                                .from('materiales')
+                                .update({ cantidad: nuevaCantidad })
+                                .eq('id', material.id);
+                        }
+                        
+                        await this.supabase
+                            .from('movimientos')
+                            .insert({
+                                material_id: material.id,
+                                tipo_movimiento: 'salida',
+                                cantidad: cantidadDespacho,
+                                usuario: this.usuarioActual,
+                                observaciones: `Despacho parcial de P${palletId}`
+                            });
+                        
+                        material.cantidad = nuevaCantidad;
+                        despachoRealizado = true;
+                        
+                        this.logInfo(`Despacho parcial: P${palletId} - ${material.descripcion} - ${cantidadDespacho} ${material.unidad}`);
+                    }
+                    
+                    if (despachoRealizado) {
+                        datos.materiales = datos.materiales.filter(m => m.cantidad > 0);
+                        datos.total = datos.materiales.reduce((sum, m) => sum + m.cantidad, 0);
+                        datos.lastUpdated = new Date().toISOString();
+                        
+                        if (datos.total === 0) {
+                            const pallet = document.querySelector(`[data-pallet="${palletId}"]`);
+                            if (pallet) pallet.remove();
+                            delete this.inventario[palletId];
+                            this.cerrarModal();
+                        } else {
+                            this.mostrarSeccion('inventario', palletId);
+                        }
+                        
+                        this.actualizarContadores();
+                        this.logInfo(`Despacho completado para P${palletId}`);
+                    }
+                    
+                } catch (error) {
+                    this.logError('Error procesando despacho', error);
+                    this.mostrarErrorUsuario('Error al procesar el despacho: ' + error.message);
+                }
+            }
+
+            async despacharTodoPallet(palletId) {
+                try {
+                    if (!confirm(`¿Estás seguro de despachar TODO el pallet P${palletId}?`)) return;
+                    
+                    if (!this.supabase || !this.isOnline) {
+                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
+                        return;
+                    }
+
+                    const datos = this.inventario[palletId];
+                    if (!datos) return;
+
+                    for (const material of datos.materiales) {
+                        await this.supabase
+                            .from('materiales')
+                            .update({ activo: false })
+                            .eq('id', material.id);
+                        
+                        await this.supabase
+                            .from('movimientos')
+                            .insert({
+                                material_id: material.id,
+                                tipo_movimiento: 'salida',
+                                cantidad: material.cantidad,
+                                usuario: this.usuarioActual,
+                                observaciones: `Despacho completo del pallet P${palletId}`
+                            });
+                    }
+                    
+                    const pallet = document.querySelector(`[data-pallet="${palletId}"]`);
+                    if (pallet) pallet.remove();
+                    
+                    delete this.inventario[palletId];
+                    
+                    this.cerrarModal();
+                    this.actualizarContadores();
+                    
+                    this.logInfo(`Pallet P${palletId} despachado completamente`);
+                    
+                } catch (error) {
+                    this.logError('Error despachando pallet completo', error);
+                    this.mostrarErrorUsuario('Error al despachar el pallet: ' + error.message);
                 }
             }
 
@@ -1159,6 +1515,152 @@
                 }
             }
 
+            async buscarMateriales() {
+                try {
+                    const tipo = document.getElementById('search-tipo')?.value || '';
+                    const circunf = document.getElementById('search-circunf')?.value || '';
+                    const espesor = document.getElementById('search-espesor')?.value || '';
+                    const angulo = document.getElementById('search-angulo')?.value || '';
+
+                    if (!tipo && !circunf && !espesor && !angulo) {
+                        this.mostrarErrorUsuario('Ingresa al menos un criterio de búsqueda');
+                        return;
+                    }
+
+                    if (!this.supabase || !this.isOnline) {
+                        this.buscarMaterialesLocal(tipo, circunf, espesor, angulo);
+                        return;
+                    }
+
+                    let query = this.supabase
+                        .from('materiales')
+                        .select(`
+                            *,
+                            pallets!inner (numero)
+                        `)
+                        .eq('activo', true);
+
+                    if (tipo) {
+                        if (angulo && (tipo === '90' || tipo === '45')) {
+                            query = query.ilike('tipo', `%codo%${tipo}%`);
+                        } else {
+                            query = query.ilike('tipo', `%${tipo}%`);
+                        }
+                    }
+                    
+                    if (circunf) {
+                        query = query.ilike('circunferencia', `%${circunf}%`);
+                    }
+                    
+                    if (espesor) {
+                        query = query.ilike('espesor', `%${espesor}%`);
+                    }
+
+                    const { data: materiales, error } = await query;
+
+                    if (error) throw error;
+
+                    this.mostrarResultadosBusqueda(materiales || []);
+                    
+                } catch (error) {
+                    this.logError('Error en búsqueda', error);
+                    this.mostrarErrorUsuario('Error realizando búsqueda: ' + error.message);
+                }
+            }
+
+            buscarMaterialesLocal(tipo, circunf, espesor, angulo) {
+                const resultados = [];
+                
+                Object.keys(this.inventario).forEach(palletId => {
+                    const datos = this.inventario[palletId];
+                    
+                    datos.materiales.forEach(material => {
+                        let coincide = true;
+                        
+                        if (tipo && !material.tipo.toLowerCase().includes(tipo.toLowerCase())) {
+                            if (angulo && !material.tipo.toLowerCase().includes(angulo)) {
+                                coincide = false;
+                            } else if (!angulo) {
+                                coincide = false;
+                            }
+                        }
+                        
+                        if (circunf && !material.circunferencia?.toString().includes(circunf)) {
+                            coincide = false;
+                        }
+                        
+                        if (espesor && !material.espesor?.toString().includes(espesor)) {
+                            coincide = false;
+                        }
+                        
+                        if (coincide) {
+                            resultados.push({
+                                ...material,
+                                pallets: { numero: palletId }
+                            });
+                        }
+                    });
+                });
+                
+                this.mostrarResultadosBusqueda(resultados);
+            }
+
+            mostrarResultadosBusqueda(materiales) {
+                const resultadosContainer = document.getElementById('resultados-busqueda');
+                const contenidoResultados = document.getElementById('contenido-resultados');
+                
+                if (!resultadosContainer || !contenidoResultados) return;
+                
+                if (materiales.length === 0) {
+                    resultadosContainer.style.display = 'none';
+                    this.mostrarErrorUsuario('No se encontraron materiales que coincidan con los criterios');
+                    return;
+                }
+                
+                contenidoResultados.innerHTML = materiales.map(material => `
+                    <div style="background: rgba(255,255,255,0.1); padding: 8px; margin: 4px 0; border-radius: 4px; border-left: 3px solid #38a169;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: white; font-size: 12px;">${material.descripcion_completa || material.tipo}</strong><br>
+                                <small style="color: #a0aec0;">
+                                    ${material.cantidad} ${material.unidad || 'unidades'} en 
+                                    <strong>Pallet P${material.pallets.numero}</strong>
+                                </small>
+                            </div>
+                            <button onclick="inventorySystem.irAPallet(${material.pallets.numero})" 
+                                    style="padding: 4px 8px; background: #38a169; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">
+                                Ver
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                resultadosContainer.style.display = 'block';
+                this.logInfo(`Búsqueda completada: ${materiales.length} materiales encontrados`);
+            }
+
+            limpiarBusqueda() {
+                document.getElementById('search-tipo').value = '';
+                document.getElementById('search-circunf').value = '';
+                document.getElementById('search-espesor').value = '';
+                document.getElementById('search-angulo').value = '';
+                
+                const resultados = document.getElementById('resultados-busqueda');
+                if (resultados) {
+                    resultados.style.display = 'none';
+                }
+                
+                this.logInfo('Búsqueda limpiada');
+            }
+
+            irAPallet(palletId) {
+                this.abrirModal(palletId);
+                const resultados = document.getElementById('resultados-busqueda');
+                if (resultados) {
+                    resultados.style.display = 'none';
+                }
+            }
+
             mostrarErrorUsuario(mensaje) {
                 alert(`Error del Sistema: ${mensaje}`);
                 this.logError('Error mostrado al usuario', new Error(mensaje));
@@ -1175,14 +1677,14 @@
         }
 
         function buscarMateriales() {
-            console.log('Función buscarMateriales ejecutada');
+            if (window.inventorySystem) {
+                window.inventorySystem.buscarMateriales();
+            }
         }
 
         function limpiarBusqueda() {
-            console.log('Función limpiarBusqueda ejecutada');
-            const resultados = document.getElementById('resultados-busqueda');
-            if (resultados) {
-                resultados.style.display = 'none';
+            if (window.inventorySystem) {
+                window.inventorySystem.limpiarBusqueda();
             }
         }
 
