@@ -721,6 +721,7 @@
                 }
             }
 
+            // CONFIGURACIÓN DE POLLING MEJORADO PARA SINCRONIZACIÓN COMPLETA
             configurarSincronizacionTiempoReal() {
                 try {
                     if (!this.supabase || !this.isOnline) return;
@@ -729,38 +730,75 @@
                         clearInterval(this.pollingInterval);
                     }
                     
-                    this.logInfo('Iniciando polling automático cada 10 segundos...');
+                    this.logInfo('Iniciando polling automático mejorado cada 10 segundos...');
                     
                     this.pollingInterval = setInterval(async () => {
                         try {
                             if (!this.supabase || !this.isOnline) return;
                             
                             const timestampActual = new Date().toISOString();
+                            let cambiosDetectados = false;
                             
-                            const { data: materialesRecientes, error } = await this.supabase
+                            // 1. Verificar cambios en MATERIALES (contenido)
+                            const { data: materialesRecientes, error: errorMateriales } = await this.supabase
                                 .from('materiales')
                                 .select('*')
                                 .gte('fecha_recepcion', this.ultimaVerificacion)
                                 .eq('activo', true);
                             
-                            if (!error && materialesRecientes && materialesRecientes.length > 0) {
-                                this.logInfo(`Polling detectó ${materialesRecientes.length} cambios`);
+                            if (errorMateriales) throw errorMateriales;
+                            
+                            if (materialesRecientes && materialesRecientes.length > 0) {
+                                this.logInfo(`Polling detectó ${materialesRecientes.length} cambios en materiales`);
+                                cambiosDetectados = true;
+                            }
+                            
+                            // 2. Verificar cambios en PALLETS (nuevos pallets o posiciones)
+                            const { data: palletsRecientes, error: errorPallets } = await this.supabase
+                                .from('pallets')
+                                .select('*')
+                                .gte('created_at', this.ultimaVerificacion);
+                            
+                            if (errorPallets) throw errorPallets;
+                            
+                            if (palletsRecientes && palletsRecientes.length > 0) {
+                                this.logInfo(`Polling detectó ${palletsRecientes.length} cambios en pallets (nuevos o reposicionados)`);
+                                cambiosDetectados = true;
+                            }
+                            
+                            // 3. Verificar cambios en POSICIONES (pallets movidos)
+                            const { data: posicionesActualizadas, error: errorPosiciones } = await this.supabase
+                                .from('pallets')
+                                .select('*')
+                                .gte('updated_at', this.ultimaVerificacion);
+                            
+                            if (errorPosiciones) throw errorPosiciones;
+                            
+                            if (posicionesActualizadas && posicionesActualizadas.length > 0) {
+                                this.logInfo(`Polling detectó ${posicionesActualizadas.length} pallets reposicionados`);
+                                cambiosDetectados = true;
+                            }
+                            
+                            // 4. Si hay cambios, recargar inventario completo
+                            if (cambiosDetectados) {
+                                this.logInfo('Sincronizando inventario por cambios detectados...');
                                 await this.cargarInventarioDesdeDB();
                                 this.actualizarContadores();
+                                this.logInfo('Sincronización completada - inventario actualizado');
                             }
                             
                             this.ultimaVerificacion = timestampActual;
                             
                         } catch (error) {
-                            this.logError('Error en polling automático', error);
+                            this.logError('Error en polling automático mejorado', error);
                             this.isOnline = false;
                             this.actualizarEstadoConexion('disconnected');
                         }
                     }, CONFIG.POLLING_INTERVAL);
 
-                    this.logInfo('Polling automático configurado exitosamente');
+                    this.logInfo('Polling automático mejorado configurado exitosamente');
                 } catch (error) {
-                    this.logError('Error configurando polling', error);
+                    this.logError('Error configurando polling mejorado', error);
                 }
             }
 
