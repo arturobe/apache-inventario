@@ -306,14 +306,393 @@
             cursor: pointer;
         }
 
-        .btn-danger {
-            padding: 6px 10px;
-            background: #e53e3e;
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #2d3748; 
             color: white;
-            border: none;
-            border-radius: 4px;
+            overflow: hidden;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header {
+            background: #1a202c;
+            padding: 8px 15px;
+            border-bottom: 2px solid #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+            flex-shrink: 0;
+        }
+
+        .header h1 { 
+            font-size: 16px; 
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .user-selector {
+            display: flex;
+            align-items: center;
+            gap: 6px;
             font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .user-selector select {
+            padding: 3px 6px;
+            border-radius: 3px;
+            background: #4a5568;
+            color: white;
+            border: 1px solid #718096;
+            font-size: 10px;
+        }
+
+        .connection-status {
+            padding: 3px 8px;
+            border-radius: 8px;
+            font-size: 9px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .connected { background: #38a169; color: white; }
+        .connecting { background: #ed8936; color: white; }
+        .disconnected { background: #e53e3e; color: white; }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 50px);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #4a5568;
+            padding: 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex-shrink: 0;
+            max-height: calc(100vh - 50px);
+        }
+
+        .search-panel { 
+            background: transparent; 
+            padding: 0; 
+            margin: 0; 
+        }
+        
+        .search-panel h3 { 
+            font-size: 14px; 
+            margin-bottom: 8px; 
+            color: white; 
+        }
+
+        .search-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .form-field { 
+            display: flex; 
+            flex-direction: column; 
+        }
+
+        .form-field label {
+            color: white;
+            font-size: 10px;
+            margin-bottom: 2px;
+            font-weight: bold;
+        }
+
+        .form-field input, .form-field select {
+            padding: 4px;
+            border: 1px solid #718096;
+            border-radius: 3px;
+            font-size: 10px;
+            height: 28px;
+        }
+
+        .btn {
+            padding: 5px 8px;
+            background: #2d3748;
+            border: 1px solid #718096;
+            border-radius: 3px;
+            color: white;
             cursor: pointer;
+            font-size: 10px;
+            text-align: center;
+            height: 32px;
+        }
+
+        .btn:hover { background: #1a202c; }
+        .btn-search { background: #38a169; }
+        .btn-clear { background: #e53e3e; }
+        .btn-full-width { width: 100%; margin-top: 4px; }
+
+        .recent-activity {
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .recent-activity h3 {
+            font-size: 12px;
+            margin-bottom: 8px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .activity-container { 
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 150px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .warehouse {
+            flex: 1;
+            background-color: #1a202c;
+            background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400"%3E%3Crect x="10" y="10" width="200" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="220" y="10" width="70" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="10" y="200" width="200" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="220" y="200" width="70" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="150" y="250" width="40" height="20" fill="%23666" stroke="%23333" stroke-width="1"/%3E%3Cpath d="M150 255h40M150 260h40M150 265h40" stroke="%23333" stroke-width="0.5"/%3E%3C/svg%3E');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            border: 2px solid #4a5568;
+            border-radius: 6px;
+            position: relative;
+            overflow: hidden;
+            margin: 8px;
+            min-height: 400px;
+        }
+
+        .search-results {
+            background: #4a5568;
+            margin: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            display: none;
+            max-height: 120px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .search-results h3 {
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: white;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .modal.active { 
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            color: black;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 600px;
+            max-height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: #4a5568;
+            color: white;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .modal-close {
+            background: #e53e3e;
+            border: none;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .modal-body {
+            padding: 15px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        @media (max-width: 1200px) {
+            .sidebar { width: 250px; }
+            .search-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 200px;
+                order: 2;
+            }
+            
+            .main-content {
+                order: 1;
+                min-height: calc(100vh - 250px);
+            }
+            
+            .warehouse {
+                min-height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 6px 10px;
+                height: 45px;
+            }
+            
+            .header h1 { 
+                font-size: 14px; 
+            }
+            
+            .user-selector {
+                font-size: 10px;
+                gap: 4px;
+            }
+            
+            .sidebar {
+                padding: 8px;
+                max-height: 180px;
+            }
+            
+            .search-panel h3 {
+                font-size: 12px;
+            }
+            
+            .btn {
+                font-size: 9px;
+                padding: 4px 6px;
+                height: 28px;
+            }
+            
+            .main-content {
+                min-height: calc(100vh - 225px);
+            }
+            
+            .warehouse {
+                margin: 4px;
+                min-height: 250px;
+            }
+            
+            .pallet {
+                width: 16px;
+                height: 16px;
+                font-size: 7px;
+                line-height: 14px;
+            }
+            
+            .modal.active {
+                padding: 10px;
+            }
+            
+            .modal-content {
+                max-height: calc(100vh - 20px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                flex-direction: column;
+                height: 70px;
+                padding: 4px;
+                gap: 2px;
+            }
+            
+            .header h1 { 
+                font-size: 12px; 
+            }
+            
+            .main-container {
+                height: calc(100vh - 70px);
+            }
+            
+            .sidebar {
+                padding: 6px;
+                max-height: 160px;
+            }
+            
+            .search-grid {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+            
+            .form-field input, .form-field select {
+                height: 24px;
+                font-size: 9px;
+            }
+            
+            .btn {
+                height: 24px;
+                font-size: 8px;
+            }
+            
+            .main-content {
+                min-height: calc(100vh - 230px);
+            }
+            
+            .warehouse {
+                margin: 2px;
+                min-height: 200px;
+            }
+            
+            .pallet {
+                width: 14px;
+                height: 14px;
+                font-size: 6px;
+                line-height: 12px;
+            }
         }
     </style>
 </head>
@@ -409,7 +788,7 @@
                 <h3 id="modal-title">Pallet</h3>
                 <button class="modal-close" onclick="cerrarModal()">Cerrar</button>
             </div>
-            <div id="modal-body" style="padding: 20px;"></div>
+            <div class="modal-body" id="modal-body"></div>
         </div>
     </div>
 
@@ -1042,7 +1421,7 @@
                     
                     modalTitle.textContent = 'Nuevo Pallet';
                     
-                    modalBody.innerHTML = '<h3 style="text-align: center; margin-bottom: 20px;">Cargar Material en Nuevo Pallet</h3><div style="background: #f8f9fa; padding: 20px; border-radius: 8px;"><h4 style="margin-bottom: 15px; color: #2d3748;">Recibir Material</h4><form id="form-pallet-temporal"><div class="form-group"><label>Tipo de Material:</label><select id="tipo-material-temp" required><option value="">Seleccionar...</option><option value="Lamina">Lámina</option><option value="Strap">Strap</option><option value="Codo 90">Codo 90°</option><option value="Codo 45">Codo 45°</option><option value="Otro">Otro</option></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Circunferencia (pulgadas):</label><input type="text" id="circunferencia-temp" placeholder="12" required></div><div class="form-group"><label>Espesor (pulgadas):</label><input type="text" id="espesor-temp" placeholder="1.5" required></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Cantidad:</label><input type="number" id="cantidad-temp" placeholder="100" required></div><div class="form-group"><label>Unidad:</label><select id="unidad-temp" required><option value="pies lineales">Pies lineales</option><option value="piezas">Piezas</option></select></div></div><div class="form-group"><label>Proveedor:</label><input type="text" id="proveedor-temp" placeholder="Nombre del proveedor" required></div><button type="button" class="btn-primary" onclick="inventorySystem.procesarPalletTemporal(' + posX + ', ' + posY + ')">Confirmar y Asignar Número</button></form></div>';
+                    modalBody.innerHTML = '<h3 style="text-align: center; margin-bottom: 15px; color: #2d3748;">Cargar Material en Nuevo Pallet</h3><div style="background: #f8f9fa; padding: 15px; border-radius: 6px;"><h4 style="margin-bottom: 12px; color: #2d3748; font-size: 14px;">Recibir Material</h4><form id="form-pallet-temporal"><div class="form-group"><label>Tipo de Material:</label><select id="tipo-material-temp" required><option value="">Seleccionar...</option><option value="Lamina">Lámina</option><option value="Strap">Strap</option><option value="Codo 90">Codo 90°</option><option value="Codo 45">Codo 45°</option><option value="Otro">Otro</option></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div class="form-group"><label>Circunferencia:</label><input type="text" id="circunferencia-temp" placeholder="12" required></div><div class="form-group"><label>Espesor:</label><input type="text" id="espesor-temp" placeholder="1.5" required></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div class="form-group"><label>Cantidad:</label><input type="number" id="cantidad-temp" placeholder="100" required></div><div class="form-group"><label>Unidad:</label><select id="unidad-temp" required><option value="pies lineales">Pies lineales</option><option value="piezas">Piezas</option></select></div></div><div class="form-group"><label>Proveedor:</label><input type="text" id="proveedor-temp" placeholder="Nombre del proveedor" required></div><button type="button" class="btn-primary" onclick="inventorySystem.procesarPalletTemporal(' + posX + ', ' + posY + ')">Confirmar y Asignar Número</button></form></div>';
                     
                     modal.classList.add('active');
                     this.logInfo('Modal de pallet temporal abierto');
@@ -1240,22 +1619,22 @@
 
             generarSeccionInventario(datos) {
                 const materialesHTML = datos.materiales.map(function(item, index) {
-                    return '<div style="background: #f1f5f9; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #38a169;"><div style="display: flex; justify-content: space-between; align-items: start;"><div style="flex: 1;"><strong style="color: #2d3748; font-size: 14px;">' + (item.descripcion || item.tipo) + '</strong><br><div style="color: #666; font-size: 12px; margin: 4px 0;"><span style="background: #38a169; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;">' + item.cantidad + ' ' + (item.unidad || 'unidades') + '</span><span style="margin-left: 10px;">Proveedor: ' + (item.proveedor || 'N/A') + '</span></div><small style="color: #999;">Recibido: ' + new Date(item.fecha).toLocaleString() + '</small></div></div></div>';
+                    return '<div style="background: #f1f5f9; padding: 8px; margin: 6px 0; border-radius: 4px; border-left: 3px solid #38a169;"><div><strong style="color: #2d3748; font-size: 13px; display: block; margin-bottom: 4px;">' + (item.descripcion || item.tipo) + '</strong><div style="color: #666; font-size: 11px; margin: 2px 0;"><span style="background: #38a169; color: white; padding: 2px 4px; border-radius: 2px; font-weight: bold; font-size: 10px;">' + item.cantidad + ' ' + (item.unidad || 'unidades') + '</span><span style="margin-left: 8px; font-size: 10px;">Proveedor: ' + (item.proveedor || 'N/A') + '</span></div><small style="color: #999; font-size: 9px;">Recibido: ' + new Date(item.fecha).toLocaleString() + '</small></div></div>';
                 }).join('');
                 
-                return '<h3 style="color: #2d3748; margin-bottom: 15px;">Inventario Actual (' + datos.total + ' unidades totales)</h3><div style="max-height: 300px; overflow-y: auto;">' + materialesHTML + '</div>';
+                return '<h3 style="color: #2d3748; margin-bottom: 12px; font-size: 16px;">Inventario (' + datos.total + ' unidades)</h3><div style="max-height: 250px; overflow-y: auto;">' + materialesHTML + '</div>';
             }
 
             generarSeccionAgregar(palletId) {
-                return '<h3 style="color: #2d3748; margin-bottom: 15px;">Agregar Material al Pallet P' + palletId + '</h3><form id="form-agregar-material" style="background: #f8f9fa; padding: 20px; border-radius: 8px;"><div class="form-group"><label>Tipo de Material:</label><select id="tipo-agregar" required><option value="">Seleccionar...</option><option value="Lamina">Lámina</option><option value="Strap">Strap</option><option value="Codo 90">Codo 90°</option><option value="Codo 45">Codo 45°</option><option value="Otro">Otro</option></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Circunferencia (pulgadas):</label><input type="text" id="circunferencia-agregar" placeholder="12"></div><div class="form-group"><label>Espesor (pulgadas):</label><input type="text" id="espesor-agregar" placeholder="1.5"></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"><div class="form-group"><label>Cantidad:</label><input type="number" id="cantidad-agregar" placeholder="100" required min="1"></div><div class="form-group"><label>Unidad:</label><select id="unidad-agregar" required><option value="pies lineales">Pies lineales</option><option value="piezas">Piezas</option></select></div></div><div class="form-group"><label>Proveedor:</label><input type="text" id="proveedor-agregar" placeholder="Nombre del proveedor" required></div><button type="button" onclick="inventorySystem.procesarAgregarMaterial(' + palletId + ')" class="btn-primary">Agregar Material al Pallet</button></form>';
+                return '<h3 style="color: #2d3748; margin-bottom: 12px; font-size: 16px;">Agregar Material a P' + palletId + '</h3><div style="background: #f8f9fa; padding: 12px; border-radius: 6px;"><div class="form-group"><label>Tipo de Material:</label><select id="tipo-agregar" required><option value="">Seleccionar...</option><option value="Lamina">Lámina</option><option value="Strap">Strap</option><option value="Codo 90">Codo 90°</option><option value="Codo 45">Codo 45°</option><option value="Otro">Otro</option></select></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div class="form-group"><label>Circunferencia:</label><input type="text" id="circunferencia-agregar" placeholder="12"></div><div class="form-group"><label>Espesor:</label><input type="text" id="espesor-agregar" placeholder="1.5"></div></div><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div class="form-group"><label>Cantidad:</label><input type="number" id="cantidad-agregar" placeholder="100" required min="1"></div><div class="form-group"><label>Unidad:</label><select id="unidad-agregar" required><option value="pies lineales">Pies lineales</option><option value="piezas">Piezas</option></select></div></div><div class="form-group"><label>Proveedor:</label><input type="text" id="proveedor-agregar" placeholder="Nombre del proveedor" required></div><button type="button" onclick="inventorySystem.procesarAgregarMaterial(' + palletId + ')" class="btn-primary">Agregar Material</button></div>';
             }
 
             generarSeccionDespachar(datos, palletId) {
                 const materialesHTML = datos.materiales.map(function(item, index) {
-                    return '<div style="background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e2e8f0;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><div><strong style="color: #2d3748;">' + (item.descripcion || item.tipo) + '</strong><br><small style="color: #666;">Stock actual: ' + item.cantidad + ' ' + (item.unidad || 'unidades') + ' | ' + (item.proveedor || 'N/A') + '</small></div></div><div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;"><label style="min-width: 120px;">Cantidad a despachar:</label><input type="number" id="despachar-' + item.id + '" min="0" max="' + item.cantidad + '" placeholder="0" style="padding: 5px; border: 1px solid #cbd5e0; border-radius: 4px; width: 100px;"><span style="color: #666;">de ' + item.cantidad + ' disponibles</span></div></div>';
+                    return '<div style="background: white; padding: 10px; margin: 8px 0; border-radius: 4px; border: 1px solid #e2e8f0;"><div style="margin-bottom: 8px;"><strong style="color: #2d3748; font-size: 13px;">' + (item.descripcion || item.tipo) + '</strong><br><small style="color: #666; font-size: 10px;">Stock: ' + item.cantidad + ' ' + (item.unidad || 'unidades') + ' | ' + (item.proveedor || 'N/A') + '</small></div><div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;"><label style="min-width: 80px; font-size: 11px;">Despachar:</label><input type="number" id="despachar-' + item.id + '" min="0" max="' + item.cantidad + '" placeholder="0" style="padding: 4px; border: 1px solid #cbd5e0; border-radius: 3px; width: 80px; font-size: 11px;"><span style="color: #666; font-size: 10px;">de ' + item.cantidad + '</span></div></div>';
                 }).join('');
                 
-                return '<h3 style="color: #2d3748; margin-bottom: 15px;">Despachar Material del Pallet P' + palletId + '</h3><div style="background: #f8f9fa; padding: 20px; border-radius: 8px;"><h4 style="margin-bottom: 15px;">Seleccionar materiales para despachar:</h4>' + materialesHTML + '<div style="margin-top: 20px; display: flex; gap: 10px;"><button onclick="inventorySystem.procesarDespachoMaterial(' + palletId + ')" class="btn-primary" style="flex: 1;">Confirmar Despacho Parcial</button><button onclick="inventorySystem.despacharTodoPallet(' + palletId + ')" class="btn-danger" style="flex: 1;">Despachar Todo el Pallet</button></div></div>';
+                return '<h3 style="color: #2d3748; margin-bottom: 12px; font-size: 16px;">Despachar de P' + palletId + '</h3><div style="background: #f8f9fa; padding: 12px; border-radius: 6px;"><h4 style="margin-bottom: 10px; font-size: 13px;">Materiales para despachar:</h4><div style="max-height: 200px; overflow-y: auto;">' + materialesHTML + '</div><div style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;"><button onclick="inventorySystem.procesarDespachoMaterial(' + palletId + ')" class="btn-primary" style="flex: 1; min-width: 120px;">Despacho Parcial</button><button onclick="inventorySystem.despacharTodoPallet(' + palletId + ')" class="btn-danger" style="flex: 1; min-width: 120px;">Despachar Todo</button></div></div>';
             }
 
             async procesarAgregarMaterial(palletId) {
