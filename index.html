@@ -2034,7 +2034,8 @@
                 inventorySystem = new InventorySystem();
                 inventorySystem.startTime = Date.now();
                 
-                // Exponer funciones globales necesarias
+                // Exponer funciones globales necesarias (CORREGIDO)
+                window.inventorySystem = inventorySystem;
                 window.cambiarUsuario = () => inventorySystem.cambiarUsuario();
                 window.buscarMateriales = () => inventorySystem.buscarMateriales();
                 window.limpiarBusqueda = () => inventorySystem.limpiarBusqueda();
