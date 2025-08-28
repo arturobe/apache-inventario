@@ -578,20 +578,45 @@
                 }
             }
 
-            // CONFIGURAR EVENT LISTENERS
+            // CONFIGURAR EVENT LISTENERS CON MEJOR DETECCIÓN
             setupEventListeners() {
                 try {
-                    // Event listener para botón "Crear Nuevo Pallet" por ID
-                    const btnCrearPallet = document.getElementById('btn-crear-pallet');
+                    // Buscar botón por múltiples métodos
+                    let btnCrearPallet = document.getElementById('btn-crear-pallet');
+                    
+                    if (!btnCrearPallet) {
+                        // Buscar por texto como fallback
+                        const botones = document.querySelectorAll('button');
+                        botones.forEach(btn => {
+                            if (btn.textContent.trim().includes('Crear Nuevo Pallet')) {
+                                btnCrearPallet = btn;
+                                btn.id = 'btn-crear-pallet'; // Asignar ID
+                            }
+                        });
+                    }
+                    
                     if (btnCrearPallet) {
+                        // Limpiar eventos previos
+                        btnCrearPallet.onclick = null;
+                        
+                        // Asignar nuevo event listener
                         btnCrearPallet.addEventListener('click', (e) => {
                             e.preventDefault();
-                            this.logInfo('Click detectado en botón Crear Nuevo Pallet');
+                            e.stopPropagation();
+                            this.logInfo('CLICK DETECTADO - Iniciando creación de pallet temporal');
                             this.crearNuevoPallet();
                         });
+                        
                         this.logInfo('Event listener para "Crear Nuevo Pallet" configurado correctamente');
                     } else {
-                        this.logError('Botón "Crear Nuevo Pallet" no encontrado por ID');
+                        this.logError('CRÍTICO: Botón "Crear Nuevo Pallet" NO ENCONTRADO');
+                        
+                        // Debug: mostrar todos los botones disponibles
+                        const todosBotones = document.querySelectorAll('button');
+                        this.logInfo(`Botones encontrados: ${todosBotones.length}`);
+                        todosBotones.forEach((btn, index) => {
+                            this.logInfo(`Botón ${index}: "${btn.textContent.trim()}" ID: "${btn.id}"`);
+                        });
                     }
 
                     this.logInfo('Event listeners configurados');
