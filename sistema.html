@@ -700,6 +700,9 @@
                                 this.abrirModal(palletId);
                             });
                             
+                            pallet.addEventListener('mousedown', this.handleWarehouseMouseDown, { passive: false });
+                            pallet.addEventListener('touchstart', this.handleWarehouseTouchStart, { passive: false });
+                            
                             warehouse.appendChild(pallet);
                         }
                     });
@@ -712,7 +715,227 @@
 
             inicializarArrastre() {
                 try {
+            inicializarArrastre() {
+                try {
+                    const warehouse = document.getElementById('warehouse');
+                    if (!warehouse) return;
+                    
+                    // Bind de métodos para mantener contexto
+                    this.handleWarehouseMouseDown = this.handleWarehouseMouseDown.bind(this);
+                    this.handleMouseMove = this.handleMouseMove.bind(this);
+                    this.handleMouseUp = this.handleMouseUp.bind(this);
+                    this.handleWarehouseTouchStart = this.handleWarehouseTouchStart.bind(this);
+                    this.handleTouchMove = this.handleTouchMove.bind(this);
+                    this.handleTouchEnd = this.handleTouchEnd.bind(this);
+                    
+                    document.addEventListener('mousemove', this.handleMouseMove);
+                    document.addEventListener('mouseup', this.handleMouseUp);
+                    document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+                    document.addEventListener('touchend', this.handleTouchEnd);
+                    
                     this.logInfo('Sistema de arrastre inicializado');
+                } catch (error) {
+                    this.logError('Error inicializando arrastre', error);
+                }
+            }
+
+            handleWarehouseMouseDown(e) {
+                try {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const pallet = e.target.closest('.pallet');
+                    if (!pallet) return;
+                    
+                    const palletId = pallet.dataset.pallet;
+                    
+                    if (palletId === 'temporal') {
+                        this.logInfo('Pallet temporal clickeado - no arrastrable');
+                        return;
+                    }
+                    
+                    this.handleMouseDown(e, palletId);
+                } catch (error) {
+                    this.logError('Error en mousedown de warehouse', error);
+                }
+            }
+
+            handleWarehouseTouchStart(e) {
+                try {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const pallet = e.target.closest('.pallet');
+                    if (!pallet) return;
+                    
+                    const palletId = pallet.dataset.pallet;
+                    
+                    if (palletId === 'temporal') {
+                        this.logInfo('Pallet temporal tocado - no arrastrable');
+                        return;
+                    }
+                    
+                    const touch = e.touches[0];
+                    this.handleMouseDown(touch, palletId);
+                } catch (error) {
+                    this.logError('Error en touchstart de warehouse', error);
+                }
+            }
+
+            handleMouseDown(e, palletId) {
+                try {
+                    if (this.iniciarArrastre(palletId)) {
+                        const rect = document.getElementById('warehouse').getBoundingClientRect();
+                        this.arrastre.posicion = {
+                            x: e.clientX - rect.left,
+                            y: e.clientY - rect.top
+                        };
+                        this.arrastre.inicial = { ...this.arrastre.posicion };
+                    }
+                } catch (error) {
+                    this.logError('Error iniciando arrastre', error);
+                }
+            }
+
+            iniciarArrastre(palletId) {
+                try {
+                    if (palletId === 'temporal') {
+                        this.logInfo('Pallet temporal no es arrastrable');
+                        return false;
+                    }
+                    
+                    this.arrastre.activo = true;
+                    this.arrastre.palletId = palletId;
+                    
+                    const pallet = document.querySelector(`[data-pallet="${palletId}"]`);
+                    if (pallet) {
+                        pallet.classList.add('dragging');
+                        pallet.style.zIndex = '1000';
+                        document.body.style.cursor = 'grabbing';
+                    }
+                    
+                    this.logInfo(`Iniciando arrastre del pallet P${palletId}`);
+                    return true;
+                } catch (error) {
+                    this.logError('Error iniciando arrastre', error);
+                    return false;
+                }
+            }
+
+            handleMouseMove(e) {
+                if (!this.arrastre.activo) return;
+                
+                try {
+                    const rect = document.getElementById('warehouse').getBoundingClientRect();
+                    const newX = e.clientX - rect.left;
+                    const newY = e.clientY - rect.top;
+                    
+                    this.moverPallet(newX, newY);
+                } catch (error) {
+                    this.logError('Error en mousemove', error);
+                }
+            }
+
+            handleTouchMove(e) {
+                if (!this.arrastre.activo) return;
+                
+                try {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const rect = document.getElementById('warehouse').getBoundingClientRect();
+                    const newX = touch.clientX - rect.left;
+                    const newY = touch.clientY - rect.top;
+                    
+                    this.moverPallet(newX, newY);
+                } catch (error) {
+                    this.logError('Error en touchmove', error);
+                }
+            }
+
+            moverPallet(x, y) {
+                try {
+                    const pallet = document.querySelector(`[data-pallet="${this.arrastre.palletId}"]`);
+                    if (!pallet) return;
+                    
+                    const warehouse = document.getElementById('warehouse');
+                    const warehouseRect = warehouse.getBoundingClientRect();
+                    
+                    const limitedX = Math.max(0, Math.min(x - 10, warehouseRect.width - 20));
+                    const limitedY = Math.max(0, Math.min(y - 10, warehouseRect.height - 20));
+                    
+                    pallet.style.left = limitedX + 'px';
+                    pallet.style.top = limitedY + 'px';
+                    
+                    this.arrastre.posicion = { x: limitedX, y: limitedY };
+                } catch (error) {
+                    this.logError('Error moviendo pallet', error);
+                }
+            }
+
+            handleMouseUp(e) {
+                this.terminarArrastre();
+            }
+
+            handleTouchEnd(e) {
+                this.terminarArrastre();
+            }
+
+            async terminarArrastre() {
+                if (!this.arrastre.activo) return;
+                
+                try {
+                    const pallet = document.querySelector(`[data-pallet="${this.arrastre.palletId}"]`);
+                    if (pallet) {
+                        pallet.classList.remove('dragging');
+                        pallet.style.zIndex = '';
+                        document.body.style.cursor = '';
+                    }
+                    
+                    const deltaX = Math.abs(this.arrastre.posicion.x - this.arrastre.inicial.x);
+                    const deltaY = Math.abs(this.arrastre.posicion.y - this.arrastre.inicial.y);
+                    
+                    if (deltaX > 5 || deltaY > 5) {
+                        await this.actualizarPosicionPallet(this.arrastre.palletId, this.arrastre.posicion.x, this.arrastre.posicion.y);
+                        this.logInfo(`Pallet P${this.arrastre.palletId} reposicionado a (${this.arrastre.posicion.x}, ${this.arrastre.posicion.y})`);
+                        
+                        if (this.inventario[this.arrastre.palletId]) {
+                            this.inventario[this.arrastre.palletId].posicion = {
+                                x: this.arrastre.posicion.x,
+                                y: this.arrastre.posicion.y
+                            };
+                        }
+                    } else {
+                        this.abrirModal(this.arrastre.palletId);
+                    }
+                    
+                } catch (error) {
+                    this.logError('Error terminando arrastre', error);
+                } finally {
+                    this.arrastre.activo = false;
+                    this.arrastre.palletId = null;
+                }
+            }
+
+            async actualizarPosicionPallet(palletId, x, y) {
+                try {
+                    if (!this.supabase || !this.isOnline) return;
+                    
+                    const { error } = await this.supabase
+                        .from('pallets')
+                        .update({
+                            posicion_x: Math.round(x),
+                            posicion_y: Math.round(y)
+                        })
+                        .eq('numero', parseInt(palletId));
+                    
+                    if (error) throw error;
+                    
+                    this.logInfo(`Posición P${palletId} actualizada en DB: (${Math.round(x)}, ${Math.round(y)})`);
+                    
+                } catch (error) {
+                    this.logError('Error actualizando posición en DB', error);
+                }
+            }
                 } catch (error) {
                     this.logError('Error inicializando arrastre', error);
                 }
@@ -1057,6 +1280,9 @@
                     this.logInfo(`Click en pallet P${numero}`);
                     this.abrirModal(numero);
                 });
+                
+                pallet.addEventListener('mousedown', this.handleWarehouseMouseDown, { passive: false });
+                pallet.addEventListener('touchstart', this.handleWarehouseTouchStart, { passive: false });
                 
                 warehouse.appendChild(pallet);
                 
