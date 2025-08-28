@@ -1501,7 +1501,7 @@
                 }
             }
 
-            // FUNCIÓN PARA DESPACHAR CON SUPABASE
+            // DESPACHO MEJORADO CON LIBERACIÓN DE NÚMERO
             async simularDespacho(palletId) {
                 try {
                     if (!this.supabase || !this.isOnline) {
@@ -1517,7 +1517,7 @@
                         return;
                     }
                     
-                    const confirmar = confirm(`¿Despachar todo el contenido del pallet P${id}?`);
+                    const confirmar = confirm(`¿Despachar todo el contenido del pallet P${id}? El número P${id} quedará disponible para reutilizar.`);
                     if (!confirmar) return;
 
                     // Marcar todos los materiales como inactivos en DB
@@ -1537,7 +1537,7 @@
                         cantidad: material.cantidad,
                         cantidad_anterior: material.cantidad,
                         usuario: this.usuarioActual,
-                        observaciones: `Despacho completo de P${id}`
+                        observaciones: `Despacho completo de P${id} - Número liberado para reutilizar`
                     }));
 
                     const { error: movimientosError } = await this.supabase
@@ -1546,14 +1546,28 @@
 
                     if (movimientosError) throw movimientosError;
 
-                    this.logInfo(`Despacho completo guardado en DB: P${id}`);
+                    // OPCIONAL: Eliminar pallet vacío de la base de datos para liberar el número
+                    const { error: deleteError } = await this.supabase
+                        .from('pallets')
+                        .delete()
+                        .eq('numero', id);
+
+                    if (deleteError) throw deleteError;
+
+                    // Remover pallet del inventario local
+                    delete this.inventario[id];
+
+                    // Remover elemento visual
+                    const palletElement = document.querySelector(`[data-pallet="${id}"]`);
+                    if (palletElement) {
+                        palletElement.remove();
+                    }
+
+                    this.logInfo(`Despacho completo P${id} - Número liberado y disponible para reutilizar`);
                     this.cerrarModal();
+                    this.actualizarContadores();
                     
-                    // Forzar sincronización inmediata
-                    setTimeout(() => {
-                        this.cargarInventarioDesdeDB();
-                        this.actualizarContadores();
-                    }, 500);
+                    alert(`Pallet P${id} despachado completamente. El número P${id} está disponible para el próximo pallet.`);
                     
                 } catch (error) {
                     this.logError('Error despachando en DB', error);
@@ -1561,29 +1575,13 @@
                 }
             }
 
-            // CREAR NUEVO PALLET CON SUPABASE
+            // CREAR NUEVO PALLET TEMPORAL (SIN NÚMERO ASIGNADO)
             async crearNuevoPallet() {
                 try {
-                    if (!this.supabase || !this.isOnline) {
-                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
-                        return;
-                    }
-
                     const warehouse = document.getElementById('warehouse');
                     if (!warehouse) {
                         throw new Error('Warehouse no encontrado');
                     }
-                    
-                    // Obtener próximo número de pallet desde DB
-                    const { data: ultimoPallet, error } = await this.supabase
-                        .from('pallets')
-                        .select('numero')
-                        .order('numero', { ascending: false })
-                        .limit(1);
-
-                    if (error && error.code !== 'PGRST116') throw error;
-
-                    const nuevoId = (ultimoPallet && ultimoPallet.length > 0) ? ultimoPallet[0].numero + 1 : 1;
                     
                     // Posición inicial (centro del almacén)
                     const warehouseRect = warehouse.getBoundingClientRect();
@@ -1593,55 +1591,117 @@
                     const posX = Math.max(10, centroX);
                     const posY = Math.max(10, centroY);
 
-                    // Crear pallet en DB
-                    const { data: palletDB, error: palletError } = await this.supabase
-                        .from('pallets')
-                        .insert({
-                            numero: nuevoId,
-                            posicion_x: posX,
-                            posicion_y: posY
-                        })
-                        .select()
-                        .single();
-
-                    if (palletError) throw palletError;
-
-                    // Crear pallet visual (oculto inicialmente)
-                    const pallet = document.createElement('div');
-                    pallet.className = 'pallet empty';
-                    pallet.dataset.pallet = nuevoId;
-                    pallet.title = `Pallet P${nuevoId} - Click para gestionar`;
-                    pallet.textContent = nuevoId;
-                    pallet.style.display = 'none';
-                    pallet.style.left = posX + 'px';
-                    pallet.style.top = posY + 'px';
+                    // Crear pallet visual temporal sin número asignado
+                    const palletTemporal = document.createElement('div');
+                    palletTemporal.className = 'pallet empty temporal';
+                    palletTemporal.dataset.pallet = 'temporal';
+                    palletTemporal.title = 'Pallet temporal - Click para cargar material';
+                    palletTemporal.textContent = '?';
+                    palletTemporal.style.left = posX + 'px';
+                    palletTemporal.style.top = posY + 'px';
                     
-                    this.aplicarEstilosPallet(pallet);
-                    warehouse.appendChild(pallet);
+                    this.aplicarEstilosPallet(palletTemporal);
+                    warehouse.appendChild(palletTemporal);
                     
-                    // Crear datos del inventario local
-                    this.inventario[nuevoId] = {
-                        materiales: [],
-                        total: 0,
-                        created: new Date().toISOString(),
-                        lastUpdated: new Date().toISOString(),
-                        visible: false,
-                        posicion: { x: posX, y: posY }
-                    };
-                    
-                    this.ultimoPalletId = Math.max(this.ultimoPalletId, nuevoId);
-                    
-                    this.logInfo(`Pallet P${nuevoId} creado en DB`);
-                    this.actualizarContadores();
+                    this.logInfo('Pallet temporal creado - se asignará número al cargar material');
                     
                     // Abrir modal inmediatamente para cargar material
-                    this.abrirModal(nuevoId);
+                    this.abrirModalPalletTemporal(posX, posY);
                     
-                    return nuevoId;
                 } catch (error) {
-                    this.logError('Error creando pallet en DB', error);
-                    this.mostrarErrorUsuario('Error al crear pallet en la base de datos');
-                    return null;
+                    this.logError('Error creando pallet temporal', error);
+                    this.mostrarErrorUsuario('Error al crear pallet temporal');
+                }
+            }
+
+            // OBTENER PRÓXIMO NÚMERO DISPONIBLE
+            obtenerProximoNumeroDisponible() {
+                // Obtener números ocupados (pallets con material)
+                const numerosOcupados = Object.keys(this.inventario)
+                    .map(Number)
+                    .filter(num => this.inventario[num].total > 0)
+                    .sort((a, b) => a - b);
+                
+                // Encontrar el primer hueco en la secuencia
+                for (let i = 1; i <= numerosOcupados.length + 1; i++) {
+                    if (!numerosOcupados.includes(i)) {
+                        return i;
+                    }
+                }
+                
+                return 1; // Por defecto si no hay ninguno
+            }
+
+            // MODAL PARA PALLET TEMPORAL
+            abrirModalPalletTemporal(posX, posY) {
+                try {
+                    const modalTitle = document.getElementById('modal-title');
+                    const modalBody = document.getElementById('modal-body');
+                    const modal = document.getElementById('modal');
+                    
+                    modalTitle.textContent = 'Nuevo Pallet';
+                    
+                    modalBody.innerHTML = `
+                        <h3 style="text-align: center; margin-bottom: 20px;">Cargar Material en Nuevo Pallet</h3>
+                        
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                            <h4 style="margin-bottom: 15px; color: #2d3748;">Recibir Material</h4>
+                            
+                            <form id="form-pallet-temporal" onsubmit="inventorySystem.recibirMaterialPalletTemporal(event, ${posX}, ${posY})">
+                                <div class="form-group">
+                                    <label>Tipo de Material:</label>
+                                    <select id="tipo-material-temp" required>
+                                        <option value="">Seleccionar...</option>
+                                        <option value="Lamina">Lámina</option>
+                                        <option value="Strap">Strap</option>
+                                        <option value="Codo 90">Codo 90°</option>
+                                        <option value="Codo 45">Codo 45°</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div class="form-group">
+                                        <label>Circunferencia (pulgadas):</label>
+                                        <input type="text" id="circunferencia-temp" placeholder="12" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Espesor (pulgadas):</label>
+                                        <input type="text" id="espesor-temp" placeholder="1.5" required>
+                                    </div>
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                    <div class="form-group">
+                                        <label>Cantidad:</label>
+                                        <input type="number" id="cantidad-temp" placeholder="100" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Unidad:</label>
+                                        <select id="unidad-temp" required>
+                                            <option value="pies lineales">Pies lineales</option>
+                                            <option value="piezas">Piezas</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Proveedor:</label>
+                                    <input type="text" id="proveedor-temp" placeholder="Nombre del proveedor" required>
+                                </div>
+                                
+                                <button type="submit" class="btn-primary">
+                                    Confirmar y Asignar Número
+                                </button>
+                            </form>
+                        </div>
+                    `;
+                    
+                    modal.classList.add('active');
+                    this.logInfo('Modal de pallet temporal abierto');
+                    
+                } catch (error) {
+                    this.logError('Error abriendo modal temporal', error);
                 }
             }
 
