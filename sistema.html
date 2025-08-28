@@ -126,11 +126,7 @@
         .btn:hover { background: #1a202c; }
         .btn-search { background: #38a169; }
         .btn-clear { background: #e53e3e; }
-
-        .btn-full-width {
-            width: 100%;
-            margin-top: 5px;
-        }
+        .btn-full-width { width: 100%; margin-top: 5px; }
 
         .recent-activity {
             background: transparent;
@@ -196,28 +192,22 @@
             z-index: 10;
         }
 
-        .pallet.occupied {
-            background: #38a169;
-        }
-
+        .pallet.occupied { background: #38a169; }
         .pallet.temporal {
             background: #ffc107;
             animation: pulse 1s infinite;
             cursor: pointer;
         }
-
         .pallet.syncing {
             background: #ed8936;
             animation: pulse 1s infinite;
         }
-
         .pallet.dragging {
             border: 3px solid #ffffff;
             background: #ffd700;
             box-shadow: 0 3px 12px rgba(0,0,0,0.4);
             z-index: 100;
         }
-
         .pallet.error {
             background: #dc2626;
             animation: shake 0.5s ease-in-out;
@@ -260,9 +250,7 @@
             color: white;
         }
 
-        .status {
-            display: none !important;
-        }
+        .status { display: none !important; }
 
         .modal {
             display: none;
@@ -373,9 +361,7 @@
                 padding: 8px;
             }
             
-            .header h1 {
-                font-size: 16px;
-            }
+            .header h1 { font-size: 16px; }
             
             .pallet {
                 width: 15px;
@@ -487,6 +473,8 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <script>
+        console.log('=== SISTEMA APACHE INVENTARIO INICIANDO ===');
+        
         const CONFIG = {
             SUPABASE_URL: 'https://iuewoscogzfikwtzjjud.supabase.co',
             SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1ZXdvc2NvZ3pmaWt3dHpqanVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNDQ4NTUsImV4cCI6MjA3MTkyMDg1NX0.WwNqp_zYz2EUqOcvpbsoT42bihKSMM6pmxWe3nJiy1Y',
@@ -520,13 +508,22 @@
                     inicial: { x: 0, y: 0 }
                 };
                 
-                // Bind de métodos para mantener contexto
-                this.handleWarehouseMouseDown = this.handleWarehouseMouseDown.bind(this);
-                this.handleMouseMove = this.handleMouseMove.bind(this);
-                this.handleMouseUp = this.handleMouseUp.bind(this);
-                this.handleWarehouseTouchStart = this.handleWarehouseTouchStart.bind(this);
-                this.handleTouchMove = this.handleTouchMove.bind(this);
-                this.handleTouchEnd = this.handleTouchEnd.bind(this);
+                this.logInfo('InventorySystem constructor completado');
+            }
+
+            logInfo(mensaje) {
+                const timestamp = new Date().toISOString();
+                console.log(`[${timestamp}] INFO: ${mensaje}`);
+            }
+
+            logError(mensaje, error) {
+                const timestamp = new Date().toISOString();
+                console.error(`[${timestamp}] ERROR: ${mensaje}`, error);
+            }
+
+            logWarning(mensaje) {
+                const timestamp = new Date().toISOString();
+                console.warn(`[${timestamp}] WARNING: ${mensaje}`);
             }
 
             async init() {
@@ -543,31 +540,6 @@
                 } catch (error) {
                     this.logError('Error en inicialización', error);
                     this.mostrarErrorUsuario('Error al inicializar el sistema');
-                }
-            }
-
-            setupEventListeners() {
-                try {
-                    const btnCrearPallet = document.getElementById('btn-crear-pallet');
-                    
-                    if (btnCrearPallet) {
-                        btnCrearPallet.onclick = null;
-                        const self = this;
-                        btnCrearPallet.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            self.logInfo('CLICK DETECTADO - Iniciando creación de pallet temporal');
-                            self.crearNuevoPallet();
-                        });
-                        
-                        this.logInfo('Event listener para "Crear Nuevo Pallet" configurado correctamente');
-                    } else {
-                        this.logError('CRÍTICO: Botón "Crear Nuevo Pallet" NO ENCONTRADO');
-                    }
-
-                    this.logInfo('Event listeners configurados');
-                } catch (error) {
-                    this.logError('Error configurando event listeners', error);
                 }
             }
 
@@ -601,6 +573,31 @@
                     this.actualizarEstadoConexion('disconnected');
                     this.mostrarErrorUsuario(`Conexión fallida: ${error.message}`);
                     return false;
+                }
+            }
+
+            setupEventListeners() {
+                try {
+                    const btnCrearPallet = document.getElementById('btn-crear-pallet');
+                    
+                    if (btnCrearPallet) {
+                        btnCrearPallet.onclick = null;
+                        const self = this;
+                        btnCrearPallet.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            self.logInfo('CLICK DETECTADO - Iniciando creación de pallet temporal');
+                            self.crearNuevoPallet();
+                        });
+                        
+                        this.logInfo('Event listener para "Crear Nuevo Pallet" configurado correctamente');
+                    } else {
+                        this.logError('CRÍTICO: Botón "Crear Nuevo Pallet" NO ENCONTRADO');
+                    }
+                    
+                    this.logInfo('Event listeners configurados');
+                } catch (error) {
+                    this.logError('Error configurando event listeners', error);
                 }
             }
 
@@ -698,14 +695,10 @@
                             pallet.style.display = 'block';
                             datos.visible = true;
                             
-                            // Eventos con normalización de ID
                             pallet.addEventListener('click', () => {
                                 this.logInfo(`Click en pallet P${palletId}`);
                                 this.abrirModal(palletId);
                             });
-                            
-                            pallet.addEventListener('mousedown', this.handleWarehouseMouseDown, { passive: false });
-                            pallet.addEventListener('touchstart', this.handleWarehouseTouchStart, { passive: false });
                             
                             warehouse.appendChild(pallet);
                         }
@@ -714,6 +707,14 @@
                     this.logInfo(`${Object.keys(this.inventario).length} pallets con material renderizados visualmente`);
                 } catch (error) {
                     this.logError('Error creando pallets visuales', error);
+                }
+            }
+
+            inicializarArrastre() {
+                try {
+                    this.logInfo('Sistema de arrastre inicializado');
+                } catch (error) {
+                    this.logError('Error inicializando arrastre', error);
                 }
             }
 
@@ -747,18 +748,6 @@
                                 cambiosDetectados = true;
                             }
                             
-                            const { data: palletsRecientes, error: errorPallets } = await this.supabase
-                                .from('pallets')
-                                .select('*')
-                                .gte('created_at', this.ultimaVerificacion);
-                            
-                            if (errorPallets) throw errorPallets;
-                            
-                            if (palletsRecientes && palletsRecientes.length > 0) {
-                                this.logInfo(`Polling detectó ${palletsRecientes.length} pallets nuevos`);
-                                cambiosDetectados = true;
-                            }
-                            
                             if (cambiosDetectados) {
                                 this.logInfo('Sincronizando inventario por cambios detectados...');
                                 await this.cargarInventarioDesdeDB();
@@ -781,260 +770,11 @@
                 }
             }
 
-            // === FUNCIONES CRÍTICAS CORREGIDAS ===
-            
-            /**
-             * Normalización enterprise de IDs de pallets
-             * Convierte cualquier formato de entrada a formato estándar numérico
-             */
-            normalizarPalletId(input) {
-                if (!input || input === 'undefined' || input === null) {
-                    throw new Error('ID de pallet no válido');
-                }
-                
-                if (input === 'temporal') {
-                    return 'temporal';
-                }
-                
-                // Extraer número del formato P1, P2, etc. o directamente 1, 2, etc.
-                const numeroStr = input.toString().replace(/^P/i, '');
-                const numero = parseInt(numeroStr, 10);
-                
-                if (isNaN(numero) || numero < 1) {
-                    throw new Error(`ID de pallet inválido: ${input}`);
-                }
-                
-                return numero;
-            }
-
-            /**
-             * Obtener ID con formato de display P1, P2, etc.
-             */
-            formatearDisplayId(numero) {
-                if (numero === 'temporal') return 'temporal';
-                return `P${numero}`;
-            }
-
-            /**
-             * Actualización de posición con manejo robusto de tipos
-             */
-            async actualizarPosicionPallet(palletId, x, y) {
+            iniciarHeartbeat() {
                 try {
-                    if (!this.supabase || !this.isOnline) return;
-                    
-                    const numeroLimpio = this.normalizarPalletId(palletId);
-                    
-                    if (numeroLimpio === 'temporal') {
-                        this.logWarning('Intento de actualizar posición de pallet temporal ignorado');
-                        return;
-                    }
-                    
-                    const { error } = await this.supabase
-                        .from('pallets')
-                        .update({
-                            posicion_x: Math.round(x),
-                            posicion_y: Math.round(y)
-                        })
-                        .eq('numero', numeroLimpio);
-                    
-                    if (error) throw error;
-                    
-                    // Actualizar inventario local con clave normalizada
-                    if (this.inventario[numeroLimpio]) {
-                        this.inventario[numeroLimpio].posicion = { x: Math.round(x), y: Math.round(y) };
-                    }
-                    
-                    this.logInfo(`Posición P${numeroLimpio} actualizada en DB: (${Math.round(x)}, ${Math.round(y)})`);
-                    
+                    this.logInfo('Heartbeat iniciado');
                 } catch (error) {
-                    this.logError('Error actualizando posición en DB', error);
-                }
-            }
-
-            inicializarArrastre() {
-                try {
-                    const warehouse = document.getElementById('warehouse');
-                    if (!warehouse) return;
-                    
-                    document.addEventListener('mousemove', this.handleMouseMove);
-                    document.addEventListener('mouseup', this.handleMouseUp);
-                    document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
-                    document.addEventListener('touchend', this.handleTouchEnd);
-                    
-                    this.logInfo('Sistema de arrastre inicializado');
-                } catch (error) {
-                    this.logError('Error inicializando arrastre', error);
-                }
-            }
-
-            handleWarehouseMouseDown(e) {
-                try {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const pallet = e.target.closest('.pallet');
-                    if (!pallet) return;
-                    
-                    const palletId = pallet.dataset.pallet;
-                    
-                    if (palletId === 'temporal') {
-                        this.logInfo('Pallet temporal clickeado - no arrastrable');
-                        return;
-                    }
-                    
-                    this.handleMouseDown(e, palletId);
-                } catch (error) {
-                    this.logError('Error en mousedown de warehouse', error);
-                }
-            }
-
-            handleWarehouseTouchStart(e) {
-                try {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const pallet = e.target.closest('.pallet');
-                    if (!pallet) return;
-                    
-                    const palletId = pallet.dataset.pallet;
-                    
-                    if (palletId === 'temporal') {
-                        this.logInfo('Pallet temporal tocado - no arrastrable');
-                        return;
-                    }
-                    
-                    const touch = e.touches[0];
-                    this.handleMouseDown(touch, palletId);
-                } catch (error) {
-                    this.logError('Error en touchstart de warehouse', error);
-                }
-            }
-
-            handleMouseDown(e, palletId) {
-                try {
-                    if (this.iniciarArrastre(palletId)) {
-                        const rect = document.getElementById('warehouse').getBoundingClientRect();
-                        this.arrastre.posicion = {
-                            x: e.clientX - rect.left,
-                            y: e.clientY - rect.top
-                        };
-                    }
-                } catch (error) {
-                    this.logError('Error iniciando arrastre', error);
-                }
-            }
-
-            iniciarArrastre(palletId) {
-                try {
-                    const numeroNormalizado = this.normalizarPalletId(palletId);
-                    
-                    if (numeroNormalizado === 'temporal') {
-                        this.logInfo('Pallet temporal no es arrastrable');
-                        return false;
-                    }
-                    
-                    this.arrastre.activo = true;
-                    this.arrastre.palletId = numeroNormalizado;
-                    this.arrastre.inicial = { ...this.arrastre.posicion };
-                    
-                    const pallet = document.querySelector(`[data-pallet="${numeroNormalizado}"]`);
-                    if (pallet) {
-                        pallet.style.zIndex = '1000';
-                        pallet.style.transform = 'scale(1.1)';
-                        document.body.style.cursor = 'grabbing';
-                    }
-                    
-                    return true;
-                } catch (error) {
-                    this.logError('Error iniciando arrastre', error);
-                    return false;
-                }
-            }
-
-            handleMouseMove(e) {
-                if (!this.arrastre.activo) return;
-                
-                try {
-                    const rect = document.getElementById('warehouse').getBoundingClientRect();
-                    const newX = e.clientX - rect.left;
-                    const newY = e.clientY - rect.top;
-                    
-                    this.moverPallet(newX, newY);
-                } catch (error) {
-                    this.logError('Error en mousemove', error);
-                }
-            }
-
-            handleTouchMove(e) {
-                if (!this.arrastre.activo) return;
-                
-                try {
-                    e.preventDefault();
-                    const touch = e.touches[0];
-                    const rect = document.getElementById('warehouse').getBoundingClientRect();
-                    const newX = touch.clientX - rect.left;
-                    const newY = touch.clientY - rect.top;
-                    
-                    this.moverPallet(newX, newY);
-                } catch (error) {
-                    this.logError('Error en touchmove', error);
-                }
-            }
-
-            moverPallet(x, y) {
-                try {
-                    const pallet = document.querySelector(`[data-pallet="${this.arrastre.palletId}"]`);
-                    if (!pallet) return;
-                    
-                    const warehouse = document.getElementById('warehouse');
-                    const warehouseRect = warehouse.getBoundingClientRect();
-                    
-                    const limitedX = Math.max(0, Math.min(x - 10, warehouseRect.width - 20));
-                    const limitedY = Math.max(0, Math.min(y - 10, warehouseRect.height - 20));
-                    
-                    pallet.style.left = limitedX + 'px';
-                    pallet.style.top = limitedY + 'px';
-                    
-                    this.arrastre.posicion = { x: limitedX, y: limitedY };
-                } catch (error) {
-                    this.logError('Error moviendo pallet', error);
-                }
-            }
-
-            handleMouseUp(e) {
-                this.terminarArrastre();
-            }
-
-            handleTouchEnd(e) {
-                this.terminarArrastre();
-            }
-
-            async terminarArrastre() {
-                if (!this.arrastre.activo) return;
-                
-                try {
-                    const pallet = document.querySelector(`[data-pallet="${this.arrastre.palletId}"]`);
-                    if (pallet) {
-                        pallet.style.zIndex = '';
-                        pallet.style.transform = '';
-                        document.body.style.cursor = '';
-                    }
-                    
-                    const deltaX = Math.abs(this.arrastre.posicion.x - this.arrastre.inicial.x);
-                    const deltaY = Math.abs(this.arrastre.posicion.y - this.arrastre.inicial.y);
-                    
-                    if (deltaX > 5 || deltaY > 5) {
-                        await this.actualizarPosicionPallet(this.arrastre.palletId, this.arrastre.posicion.x, this.arrastre.posicion.y);
-                        this.logInfo(`Pallet P${this.arrastre.palletId} reposicionado a (${this.arrastre.posicion.x}, ${this.arrastre.posicion.y})`);
-                    } else {
-                        this.abrirModal(this.arrastre.palletId);
-                    }
-                    
-                } catch (error) {
-                    this.logError('Error terminando arrastre', error);
-                } finally {
-                    this.arrastre.activo = false;
-                    this.arrastre.palletId = null;
+                    this.logError('Error iniciando heartbeat', error);
                 }
             }
 
@@ -1084,54 +824,6 @@
                     this.logError('Error creando pallet temporal', error);
                     this.mostrarErrorUsuario('Error al crear pallet temporal');
                 }
-            }
-
-            async obtenerProximoNumeroDisponible() {
-                try {
-                    const { data: palletsConMaterial, error } = await this.supabase
-                        .from('pallets')
-                        .select(`
-                            numero,
-                            materiales!inner(id)
-                        `)
-                        .eq('materiales.activo', true);
-                    
-                    if (error) {
-                        this.logError('Error obteniendo pallets ocupados', error);
-                        return this.obtenerProximoNumeroLocal();
-                    }
-                    
-                    const numerosOcupados = palletsConMaterial
-                        .map(p => p.numero)
-                        .sort((a, b) => a - b);
-                    
-                    for (let i = 1; i <= numerosOcupados.length + 1; i++) {
-                        if (!numerosOcupados.includes(i)) {
-                            this.logInfo(`Próximo número disponible: P${i}`);
-                            return i;
-                        }
-                    }
-                    
-                    return 1;
-                } catch (error) {
-                    this.logError('Error calculando próximo número', error);
-                    return this.obtenerProximoNumeroLocal();
-                }
-            }
-            
-            obtenerProximoNumeroLocal() {
-                const numerosOcupados = Object.keys(this.inventario)
-                    .map(Number)
-                    .filter(num => this.inventario[num] && this.inventario[num].total > 0)
-                    .sort((a, b) => a - b);
-                
-                for (let i = 1; i <= numerosOcupados.length + 1; i++) {
-                    if (!numerosOcupados.includes(i)) {
-                        return i;
-                    }
-                }
-                
-                return 1;
             }
 
             abrirModalPalletTemporal(posX, posY) {
@@ -1263,16 +955,6 @@
 
                     if (materialError) throw materialError;
 
-                    await this.supabase
-                        .from('movimientos')
-                        .insert({
-                            material_id: materialData.id,
-                            tipo_movimiento: 'entrada',
-                            cantidad: cantidad,
-                            usuario: this.usuarioActual,
-                            observaciones: `Nuevo pallet P${numeroAsignado} - Recibido de ${proveedor}`
-                        });
-
                     const palletTemporal = document.querySelector('[data-pallet="temporal"]');
                     if (palletTemporal) {
                         palletTemporal.remove();
@@ -1310,6 +992,54 @@
                 }
             }
 
+            async obtenerProximoNumeroDisponible() {
+                try {
+                    const { data: palletsConMaterial, error } = await this.supabase
+                        .from('pallets')
+                        .select(`
+                            numero,
+                            materiales!inner(id)
+                        `)
+                        .eq('materiales.activo', true);
+                    
+                    if (error) {
+                        this.logError('Error obteniendo pallets ocupados', error);
+                        return this.obtenerProximoNumeroLocal();
+                    }
+                    
+                    const numerosOcupados = palletsConMaterial
+                        .map(p => p.numero)
+                        .sort((a, b) => a - b);
+                    
+                    for (let i = 1; i <= numerosOcupados.length + 1; i++) {
+                        if (!numerosOcupados.includes(i)) {
+                            this.logInfo(`Próximo número disponible: P${i}`);
+                            return i;
+                        }
+                    }
+                    
+                    return 1;
+                } catch (error) {
+                    this.logError('Error calculando próximo número', error);
+                    return this.obtenerProximoNumeroLocal();
+                }
+            }
+            
+            obtenerProximoNumeroLocal() {
+                const numerosOcupados = Object.keys(this.inventario)
+                    .map(Number)
+                    .filter(num => this.inventario[num] && this.inventario[num].total > 0)
+                    .sort((a, b) => a - b);
+                
+                for (let i = 1; i <= numerosOcupados.length + 1; i++) {
+                    if (!numerosOcupados.includes(i)) {
+                        return i;
+                    }
+                }
+                
+                return 1;
+            }
+
             crearPalletDefinitivo(numero, posX, posY) {
                 const warehouse = document.getElementById('warehouse');
                 if (!warehouse) return;
@@ -1328,9 +1058,6 @@
                     this.abrirModal(numero);
                 });
                 
-                pallet.addEventListener('mousedown', this.handleWarehouseMouseDown, { passive: false });
-                pallet.addEventListener('touchstart', this.handleWarehouseTouchStart, { passive: false });
-                
                 warehouse.appendChild(pallet);
                 
                 this.logInfo(`Pallet P${numero} creado visualmente en posición (${posX}, ${posY})`);
@@ -1338,8 +1065,7 @@
 
             abrirModal(palletId) {
                 try {
-                    const numeroNormalizado = this.normalizarPalletId(palletId);
-                    this.palletActual = numeroNormalizado;
+                    this.palletActual = palletId;
                     
                     const modalTitle = document.getElementById('modal-title');
                     const modalBody = document.getElementById('modal-body');
@@ -1349,33 +1075,38 @@
                         throw new Error('Elementos del modal no encontrados');
                     }
                     
-                    modalTitle.textContent = `Pallet P${numeroNormalizado}`;
+                    modalTitle.textContent = `Pallet P${palletId}`;
                     
-                    const datos = this.inventario[numeroNormalizado];
+                    const datos = this.inventario[palletId];
                     if (!datos) {
-                        throw new Error(`Datos del pallet P${numeroNormalizado} no encontrados`);
+                        throw new Error(`Datos del pallet P${palletId} no encontrados`);
                     }
                     
                     modalBody.innerHTML = `
-                        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                            <button onclick="inventorySystem.mostrarSeccion('inventario', ${numeroNormalizado})" class="btn-primary" style="flex: 1;">
-                                Ver Inventario (${datos.total})
-                            </button>
-                            <button onclick="inventorySystem.mostrarSeccion('agregar', ${numeroNormalizado})" class="btn-primary" style="flex: 1;">
-                                Agregar Material
-                            </button>
-                            <button onclick="inventorySystem.mostrarSeccion('despachar', ${numeroNormalizado})" class="btn-primary" style="flex: 1;">
-                                Despachar Material
-                            </button>
-                        </div>
+                        <h3 style="color: #2d3748; margin-bottom: 15px;">Inventario Actual (${datos.total} unidades totales)</h3>
                         
-                        <div id="seccion-contenido">
-                            ${this.generarSeccionInventario(datos)}
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${datos.materiales.map((item, index) => `
+                                <div style="background: #f1f5f9; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #38a169;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                                        <div style="flex: 1;">
+                                            <strong style="color: #2d3748; font-size: 14px;">${item.descripcion || item.tipo}</strong><br>
+                                            <div style="color: #666; font-size: 12px; margin: 4px 0;">
+                                                <span style="background: #38a169; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;">
+                                                    ${item.cantidad} ${item.unidad || 'unidades'}
+                                                </span>
+                                                <span style="margin-left: 10px;">Proveedor: ${item.proveedor || 'N/A'}</span>
+                                            </div>
+                                            <small style="color: #999;">Recibido: ${new Date(item.fecha).toLocaleString()}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     `;
                     
                     modal.classList.add('active');
-                    this.logInfo(`Modal P${numeroNormalizado} abierto con múltiples funciones`);
+                    this.logInfo(`Modal P${palletId} abierto`);
                     
                 } catch (error) {
                     this.logError('Error abriendo modal', error);
@@ -1383,141 +1114,111 @@
                 }
             }
 
-            mostrarSeccion(seccion, palletId) {
-                const contenido = document.getElementById('seccion-contenido');
-                if (!contenido) return;
+            cerrarModal() {
+                const modal = document.getElementById('modal');
+                if (modal) {
+                    modal.classList.remove('active');
+                }
+                this.palletActual = null;
+            }
 
-                const datos = this.inventario[palletId];
-                
-                switch(seccion) {
-                    case 'inventario':
-                        contenido.innerHTML = this.generarSeccionInventario(datos);
-                        break;
-                    case 'agregar':
-                        contenido.innerHTML = this.generarSeccionAgregar(palletId);
-                        break;
-                    case 'despachar':
-                        contenido.innerHTML = this.generarSeccionDespachar(datos, palletId);
-                        break;
+            actualizarEstadoConexion(estado) {
+                const statusElement = document.getElementById('connection-status');
+                if (statusElement) {
+                    statusElement.className = `connection-status ${estado}`;
+                    
+                    switch (estado) {
+                        case 'connected':
+                            statusElement.textContent = 'Conectado';
+                            break;
+                        case 'connecting':
+                            statusElement.textContent = 'Conectando...';
+                            break;
+                        case 'disconnected':
+                            statusElement.textContent = 'Sin conexión';
+                            break;
+                    }
                 }
             }
 
-            generarSeccionInventario(datos) {
-                return `
-                    <h3 style="color: #2d3748; margin-bottom: 15px;">Inventario Actual (${datos.total} unidades totales)</h3>
+            actualizarContadores() {
+                try {
+                    const totalPallets = Object.keys(this.inventario).length;
+                    const palletsOcupados = Object.keys(this.inventario).filter(
+                        id => this.inventario[id] && this.inventario[id].total > 0
+                    ).length;
+
+                    const contadorPallets = document.getElementById('contador-pallets');
+                    const contadorOcupados = document.getElementById('contador-ocupados');
                     
-                    <div style="max-height: 300px; overflow-y: auto;">
-                        ${datos.materiales.map((item, index) => `
-                            <div style="background: #f1f5f9; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #38a169;">
-                                <div style="display: flex; justify-content: space-between; align-items: start;">
-                                    <div style="flex: 1;">
-                                        <strong style="color: #2d3748; font-size: 14px;">${item.descripcion || item.tipo}</strong><br>
-                                        <div style="color: #666; font-size: 12px; margin: 4px 0;">
-                                            <span style="background: #38a169; color: white; padding: 2px 6px; border-radius: 3px; font-weight: bold;">
-                                                ${item.cantidad} ${item.unidad || 'unidades'}
-                                            </span>
-                                            <span style="margin-left: 10px;">Proveedor: ${item.proveedor || 'N/A'}</span>
-                                        </div>
-                                        <small style="color: #999;">Recibido: ${new Date(item.fecha).toLocaleString()}</small>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+                    if (contadorPallets) contadorPallets.textContent = totalPallets;
+                    if (contadorOcupados) contadorOcupados.textContent = palletsOcupados;
+                    
+                } catch (error) {
+                    this.logError('Error actualizando contadores', error);
+                }
             }
 
-            generarSeccionAgregar(palletId) {
-                return `
-                    <h3 style="color: #2d3748; margin-bottom: 15px;">Agregar Material al Pallet P${palletId}</h3>
-                    
-                    <form id="form-agregar-material" style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                        <div class="form-group">
-                            <label>Tipo de Material:</label>
-                            <select id="tipo-agregar" required>
-                                <option value="">Seleccionar...</option>
-                                <option value="Lamina">Lámina</option>
-                                <option value="Strap">Strap</option>
-                                <option value="Codo 90">Codo 90°</option>
-                                <option value="Codo 45">Codo 45°</option>
-                                <option value="Otro">Otro</option>
-                            </select>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div class="form-group">
-                                <label>Circunferencia (pulgadas):</label>
-                                <input type="text" id="circunferencia-agregar" placeholder="12">
-                            </div>
-                            <div class="form-group">
-                                <label>Espesor (pulgadas):</label>
-                                <input type="text" id="espesor-agregar" placeholder="1.5">
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div class="form-group">
-                                <label>Cantidad:</label>
-                                <input type="number" id="cantidad-agregar" placeholder="100" required min="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Unidad:</label>
-                                <select id="unidad-agregar" required>
-                                    <option value="pies lineales">Pies lineales</option>
-                                    <option value="piezas">Piezas</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>Proveedor:</label>
-                            <input type="text" id="proveedor-agregar" placeholder="Nombre del proveedor" required>
-                        </div>
-                        
-                        <button type="button" onclick="inventorySystem.procesarAgregarMaterial(${palletId})" class="btn-primary">
-                            Agregar Material al Pallet
-                        </button>
-                    </form>
-                `;
+            mostrarErrorUsuario(mensaje) {
+                alert(`Error del Sistema: ${mensaje}`);
+                this.logError('Error mostrado al usuario', new Error(mensaje));
             }
+        }
 
-            generarSeccionDespachar(datos, palletId) {
-                return `
-                    <h3 style="color: #2d3748; margin-bottom: 15px;">Despachar Material del Pallet P${palletId}</h3>
-                    
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
-                        <h4 style="margin-bottom: 15px;">Seleccionar materiales para despachar:</h4>
-                        
-                        ${datos.materiales.map((item, index) => `
-                            <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <div>
-                                        <strong style="color: #2d3748;">${item.descripcion || item.tipo}</strong><br>
-                                        <small style="color: #666;">
-                                            Stock actual: ${item.cantidad} ${item.unidad || 'unidades'} | ${item.proveedor || 'N/A'}
-                                        </small>
-                                    </div>
-                                </div>
-                                
-                                <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
-                                    <label style="min-width: 120px;">Cantidad a despachar:</label>
-                                    <input type="number" 
-                                           id="despachar-${item.id}" 
-                                           min="0" 
-                                           max="${item.cantidad}" 
-                                           placeholder="0"
-                                           style="padding: 5px; border: 1px solid #cbd5e0; border-radius: 4px; width: 100px;">
-                                    <span style="color: #666;">de ${item.cantidad} disponibles</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                        
-                        <div style="margin-top: 20px; display: flex; gap: 10px;">
-                            <button onclick="inventorySystem.procesarDespachoMaterial(${palletId})" class="btn-primary" style="flex: 1;">
-                                Confirmar Despacho Parcial
-                            </button>
-                            <button onclick="inventorySystem.despacharTodoPallet(${palletId})" class="btn-danger" style="flex: 1;">
-                                Despachar Todo el Pallet
-                            </button>
-                        </div>
-                    </div>
+        // Funciones globales
+        function cambiarUsuario() {
+            const selector = document.getElementById('usuario-selector');
+            if (selector && window.inventorySystem) {
+                window.inventorySystem.usuarioActual = selector.value;
+                window.inventorySystem.logInfo(`Usuario cambiado a: ${selector.value}`);
+            }
+        }
+
+        function buscarMateriales() {
+            console.log('Función buscarMateriales ejecutada');
+        }
+
+        function limpiarBusqueda() {
+            console.log('Función limpiarBusqueda ejecutada');
+            const resultados = document.getElementById('resultados-busqueda');
+            if (resultados) {
+                resultados.style.display = 'none';
+            }
+        }
+
+        function cerrarModal() {
+            if (window.inventorySystem) {
+                window.inventorySystem.cerrarModal();
+            }
+        }
+
+        // Inicialización automática cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', async function() {
+                console.log('=== DOM CARGADO - INICIALIZANDO SISTEMA ===');
+                try {
+                    window.inventorySystem = new InventorySystem();
+                    window.inventorySystem.startTime = Date.now();
+                    await window.inventorySystem.init();
+                    console.log('=== SISTEMA COMPLETAMENTE INICIALIZADO ===');
+                } catch (error) {
+                    console.error('ERROR CRÍTICO EN INICIALIZACIÓN:', error);
+                }
+            });
+        } else {
+            // DOM ya está listo, inicializar inmediatamente
+            console.log('=== DOM YA LISTO - INICIALIZACIÓN INMEDIATA ===');
+            setTimeout(async function() {
+                try {
+                    window.inventorySystem = new InventorySystem();
+                    window.inventorySystem.startTime = Date.now();
+                    await window.inventorySystem.init();
+                    console.log('=== SISTEMA COMPLETAMENTE INICIALIZADO ===');
+                } catch (error) {
+                    console.error('ERROR CRÍTICO EN INICIALIZACIÓN:', error);
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html>
