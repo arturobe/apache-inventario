@@ -1143,6 +1143,23 @@
                     const numeroAsignado = await this.obtenerProximoNumeroDisponible();
                     this.logInfo(`Número asignado para nuevo pallet: P${numeroAsignado}`);
                     
+                    // VALIDACIÓN ANTI-COLISIÓN: Verificar que el número no exista antes de crear
+                    const { data: palletExistente, error: errorVerificacion } = await this.supabase
+                        .from('pallets')
+                        .select('numero')
+                        .eq('numero', numeroAsignado)
+                        .maybeSingle();
+                    
+                    if (errorVerificacion) throw errorVerificacion;
+                    
+                    if (palletExistente) {
+                        this.logError(`COLISIÓN DETECTADA: P${numeroAsignado} ya existe`, new Error('Colisión de ID'));
+                        // Recalcular número disponible
+                        const nuevoNumero = await this.obtenerProximoNumeroDisponible();
+                        this.logInfo(`Recalculando número: P${nuevoNumero}`);
+                        return this.procesarPalletTemporal(posX, posY); // Reintentar con nuevo cálculo
+                    }
+                    
                     let descripcion = tipo;
                     if (circunf && espesor) {
                         descripcion += ` - ${circunf}" x ${espesor}"`;
@@ -1217,31 +1234,42 @@
 
             async obtenerProximoNumeroDisponible() {
                 try {
-                    const { data: palletsConMaterial, error } = await this.supabase
+                    // Consultar TODOS los pallets existentes, no solo los que tienen material
+                    const { data: todosLosPallets, error } = await this.supabase
                         .from('pallets')
-                        .select(`
-                            numero,
-                            materiales!inner(id)
-                        `)
-                        .eq('materiales.activo', true);
+                        .select('numero')
+                        .order('numero', { ascending: true });
                     
                     if (error) {
-                        this.logError('Error obteniendo pallets ocupados', error);
+                        this.logError('Error obteniendo pallets existentes', error);
                         return this.obtenerProximoNumeroLocal();
                     }
                     
-                    const numerosOcupados = palletsConMaterial
+                    if (!todosLosPallets || todosLosPallets.length === 0) {
+                        this.logInfo('No hay pallets existentes, asignando P1');
+                        return 1;
+                    }
+                    
+                    const numerosExistentes = todosLosPallets
                         .map(p => p.numero)
+                        .filter(num => num && !isNaN(num))
                         .sort((a, b) => a - b);
                     
-                    for (let i = 1; i <= numerosOcupados.length + 1; i++) {
-                        if (!numerosOcupados.includes(i)) {
-                            this.logInfo(`Próximo número disponible: P${i}`);
+                    this.logInfo(`Números existentes en DB: ${numerosExistentes.join(', ')}`);
+                    
+                    // Buscar el primer número disponible
+                    for (let i = 1; i <= numerosExistentes.length + 1; i++) {
+                        if (!numerosExistentes.includes(i)) {
+                            this.logInfo(`Próximo número disponible calculado: P${i}`);
                             return i;
                         }
                     }
                     
-                    return 1;
+                    // Si todos los números secuenciales están ocupados, usar el siguiente
+                    const siguienteNumero = Math.max(...numerosExistentes) + 1;
+                    this.logInfo(`Asignando siguiente número secuencial: P${siguienteNumero}`);
+                    return siguienteNumero;
+                    
                 } catch (error) {
                     this.logError('Error calculando próximo número', error);
                     return this.obtenerProximoNumeroLocal();
@@ -1249,18 +1277,24 @@
             }
             
             obtenerProximoNumeroLocal() {
-                const numerosOcupados = Object.keys(this.inventario)
+                // Fallback usando solo datos locales
+                const numerosLocales = Object.keys(this.inventario)
                     .map(Number)
-                    .filter(num => this.inventario[num] && this.inventario[num].total > 0)
+                    .filter(num => !isNaN(num))
                     .sort((a, b) => a - b);
                 
-                for (let i = 1; i <= numerosOcupados.length + 1; i++) {
-                    if (!numerosOcupados.includes(i)) {
+                if (numerosLocales.length === 0) return 1;
+                
+                for (let i = 1; i <= numerosLocales.length + 1; i++) {
+                    if (!numerosLocales.includes(i)) {
+                        this.logInfo(`Número disponible local: P${i}`);
                         return i;
                     }
                 }
                 
-                return 1;
+                const siguienteLocal = Math.max(...numerosLocales) + 1;
+                this.logInfo(`Siguiente número local: P${siguienteLocal}`);
+                return siguienteLocal;
             }
 
             crearPalletDefinitivo(numero, posX, posY) {
