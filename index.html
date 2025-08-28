@@ -1580,4 +1580,265 @@
 
             async actualizarPosicionPallet(palletId, x, y) {
                 try {
-                    if (!
+                    if (!this.supabase || !this.isOnline) return;
+
+                    const { error } = await this.supabase
+                        .from('pallets')
+                        .update({
+                            posicion_x: x,
+                            posicion_y: y
+                        })
+                        .eq('numero', palletId);
+
+                    if (error) throw error;
+
+                    if (this.inventario[palletId]) {
+                        this.inventario[palletId].posicion = { x, y };
+                    }
+
+                    this.logInfo(`Posición P${palletId} actualizada en DB: (${x}, ${y})`);
+                } catch (error) {
+                    this.logError('Error actualizando posición en DB', error);
+                }
+            }
+
+            aplicarEstilosPallet(pallet) {
+                pallet.style.width = '20px';
+                pallet.style.height = '20px';
+                pallet.style.minWidth = '20px';
+                pallet.style.minHeight = '20px';
+                pallet.style.maxWidth = '20px';
+                pallet.style.maxHeight = '20px';
+                pallet.style.boxSizing = 'border-box';
+                pallet.style.fontSize = '8px';
+                pallet.style.color = 'white';
+                pallet.style.fontWeight = 'bold';
+                pallet.style.display = 'flex';
+                pallet.style.alignItems = 'center';
+                pallet.style.justifyContent = 'center';
+                pallet.style.textShadow = '1px 1px 1px rgba(0,0,0,0.8)';
+                pallet.style.position = 'absolute';
+                pallet.style.cursor = 'move';
+                pallet.style.border = '1px solid #fff';
+                pallet.style.borderRadius = '2px';
+                pallet.style.userSelect = 'none';
+            }
+
+            actualizarContadores() {
+                try {
+                    const totalPallets = Object.keys(this.inventario).length;
+                    const palletsOcupados = Object.values(this.inventario).filter(p => p.total > 0).length;
+                    
+                    const contadorTotal = document.getElementById('contador-pallets');
+                    const contadorOcupados = document.getElementById('contador-ocupados');
+                    
+                    if (contadorTotal) contadorTotal.textContent = totalPallets;
+                    if (contadorOcupados) contadorOcupados.textContent = palletsOcupados;
+                } catch (error) {
+                    this.logError('Error actualizando contadores', error);
+                }
+            }
+
+            iniciarHeartbeat() {
+                this.heartbeatInterval = setInterval(() => {
+                    try {
+                        this.verificarSaludSistema();
+                    } catch (error) {
+                        this.logError('Error en heartbeat', error);
+                    }
+                }, CONFIG.HEARTBEAT_INTERVAL);
+            }
+
+            verificarSaludSistema() {
+                const metrics = {
+                    palletsCreados: Object.keys(this.inventario).length,
+                    erroresRecientes: this.errorLog.filter(e => 
+                        Date.now() - new Date(e.timestamp).getTime() < 300000
+                    ).length,
+                    memoriaUsada: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) : 'N/A',
+                    tiempoActivo: Math.round((Date.now() - this.startTime) / 1000)
+                };
+                
+                if (metrics.erroresRecientes > 10) {
+                    this.logWarning('Muchos errores recientes detectados', metrics);
+                }
+                
+                if (metrics.tiempoActivo % 300 === 0) {
+                    this.logInfo('Métricas del sistema', metrics);
+                }
+            }
+
+            actualizarEstadoConexion(estado) {
+                const statusEl = document.getElementById('connection-status');
+                if (!statusEl) return;
+                
+                statusEl.className = `connection-status ${estado}`;
+                
+                const estados = {
+                    'connected': { texto: 'Conectado', online: true },
+                    'connecting': { texto: 'Conectando...', online: false },
+                    'disconnected': { texto: 'Sin conexión', online: false }
+                };
+                
+                const estadoInfo = estados[estado] || estados.disconnected;
+                statusEl.textContent = estadoInfo.texto;
+                this.isOnline = estadoInfo.online;
+            }
+
+            mostrarErrorUsuario(mensaje) {
+                alert(`Error: ${mensaje}`);
+            }
+
+            validarPalletId(palletId) {
+                const id = parseInt(palletId);
+                if (isNaN(id) || id < 1 || id > CONFIG.MAX_PALLETS) {
+                    throw new Error(`ID de pallet inválido: ${palletId}`);
+                }
+                return id;
+            }
+
+            validarUsuario(usuario) {
+                if (!usuario || typeof usuario !== 'string' || usuario.trim().length === 0) {
+                    throw new Error('Usuario inválido');
+                }
+                return usuario.trim();
+            }
+
+            logInfo(mensaje, data = null) {
+                const timestamp = new Date().toISOString();
+                console.log(`[${timestamp}] INFO: ${mensaje}`, data || '');
+            }
+
+            logError(mensaje, error = null) {
+                const timestamp = new Date().toISOString();
+                const logEntry = { 
+                    timestamp, 
+                    level: 'ERROR', 
+                    mensaje, 
+                    error: error?.message || error,
+                    stack: error?.stack 
+                };
+                this.errorLog.push(logEntry);
+                console.error(`[${timestamp}] ERROR: ${mensaje}`, error);
+                
+                if (this.errorLog.length > 50) {
+                    this.errorLog = this.errorLog.slice(-50);
+                }
+            }
+
+            logWarning(mensaje, data = null) {
+                const timestamp = new Date().toISOString();
+                console.warn(`[${timestamp}] WARNING: ${mensaje}`, data || '');
+            }
+
+            destruir() {
+                try {
+                    if (this.heartbeatInterval) {
+                        clearInterval(this.heartbeatInterval);
+                    }
+                    
+                    if (this.pollingInterval) {
+                        clearInterval(this.pollingInterval);
+                    }
+                    
+                    this.logInfo('Sistema destruido correctamente');
+                } catch (error) {
+                    this.logError('Error destruyendo sistema', error);
+                }
+            }
+        }
+
+        // FUNCIONES GLOBALES
+        function cerrarModal() {
+            if (inventorySystem) {
+                inventorySystem.cerrarModal();
+            }
+        }
+
+        function cambiarUsuario() {
+            if (inventorySystem) {
+                inventorySystem.cambiarUsuario();
+            }
+        }
+
+        function buscarMateriales() {
+            if (inventorySystem) {
+                inventorySystem.buscarMateriales();
+            }
+        }
+
+        function limpiarBusqueda() {
+            if (inventorySystem) {
+                inventorySystem.limpiarBusqueda();
+            }
+        }
+
+        // INICIALIZACIÓN
+        let inventorySystem = null;
+
+        window.addEventListener('error', (event) => {
+            if (inventorySystem) {
+                inventorySystem.logError('Error no capturado', event.error);
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            if (inventorySystem) {
+                inventorySystem.logError('Promise rechazada', event.reason);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    .pallet {
+                        width: 20px !important;
+                        height: 20px !important;
+                        min-width: 20px !important;
+                        min-height: 20px !important;
+                        max-width: 20px !important;
+                        max-height: 20px !important;
+                        box-sizing: border-box !important;
+                        font-size: 8px !important;
+                        color: white !important;
+                        font-weight: bold !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        text-shadow: 1px 1px 1px rgba(0,0,0,0.8) !important;
+                    }
+                    .pallet:hover {
+                        width: 20px !important;
+                        height: 20px !important;
+                        transform: none !important;
+                        font-size: 9px !important;
+                    }
+                    .pallet.dragging {
+                        width: 20px !important;
+                        height: 20px !important;
+                        transform: none !important;
+                        font-size: 10px !important;
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                inventorySystem = new InventorySystem();
+                inventorySystem.startTime = Date.now();
+                window.inventorySystem = inventorySystem;
+                inventorySystem.init();
+                
+            } catch (error) {
+                console.error('Error fatal inicializando sistema:', error);
+                alert('Error crítico: No se pudo inicializar el sistema de inventario');
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (inventorySystem) {
+                inventorySystem.destruir();
+            }
+        });
+    </script>
+</body>
+</html>
