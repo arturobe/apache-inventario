@@ -1614,22 +1614,57 @@
                 }
             }
 
-            // OBTENER PRÓXIMO NÚMERO DISPONIBLE
-            obtenerProximoNumeroDisponible() {
-                // Obtener números ocupados (pallets con material)
+            // OBTENER PRÓXIMO NÚMERO DISPONIBLE (CORREGIDO)
+            async obtenerProximoNumeroDisponible() {
+                try {
+                    // Obtener números de pallets que tienen materiales activos en la DB
+                    const { data: palletsConMaterial, error } = await this.supabase
+                        .from('pallets')
+                        .select(`
+                            numero,
+                            materiales!inner(id)
+                        `)
+                        .eq('materiales.activo', true);
+                    
+                    if (error) {
+                        this.logError('Error obteniendo pallets ocupados', error);
+                        // Fallback: usar inventario local
+                        return this.obtenerProximoNumeroLocal();
+                    }
+                    
+                    const numerosOcupados = palletsConMaterial
+                        .map(p => p.numero)
+                        .sort((a, b) => a - b);
+                    
+                    // Encontrar el primer número libre en la secuencia
+                    for (let i = 1; i <= numerosOcupados.length + 1; i++) {
+                        if (!numerosOcupados.includes(i)) {
+                            this.logInfo(`Próximo número disponible: P${i}`);
+                            return i;
+                        }
+                    }
+                    
+                    return 1; // Por defecto
+                } catch (error) {
+                    this.logError('Error calculando próximo número', error);
+                    return this.obtenerProximoNumeroLocal();
+                }
+            }
+            
+            // FALLBACK PARA OBTENER NÚMERO USANDO INVENTARIO LOCAL
+            obtenerProximoNumeroLocal() {
                 const numerosOcupados = Object.keys(this.inventario)
                     .map(Number)
                     .filter(num => this.inventario[num].total > 0)
                     .sort((a, b) => a - b);
                 
-                // Encontrar el primer hueco en la secuencia
                 for (let i = 1; i <= numerosOcupados.length + 1; i++) {
                     if (!numerosOcupados.includes(i)) {
                         return i;
                     }
                 }
                 
-                return 1; // Por defecto si no hay ninguno
+                return 1;
             }
 
             // MODAL PARA PALLET TEMPORAL
