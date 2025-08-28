@@ -569,6 +569,7 @@
                     this.logInfo('Sistema inicializando...');
                     await this.conectarSupabase();
                     await this.cargarInventarioDesdeDB();
+                    this.setupEventListeners();
                     this.inicializarArrastre();
                     this.configurarSincronizacionTiempoReal();
                     this.iniciarHeartbeat();
@@ -1051,8 +1052,43 @@
                 }
             }
 
-            // SISTEMA DE ARRASTRE ENTERPRISE CON RECUPERACIÓN DE ERRORES
-            inicializarArrastre() {
+            // CONFIGURAR EVENT LISTENERS (MEJORADO CON BOTÓN CREAR PALLET)
+            setupEventListeners() {
+                try {
+                    // Event listener para botón "Crear Nuevo Pallet"
+                    const btnCrearPallet = document.querySelector('button[onclick*="crearNuevoPallet"]');
+                    if (btnCrearPallet) {
+                        btnCrearPallet.removeAttribute('onclick');
+                        btnCrearPallet.addEventListener('click', () => {
+                            this.crearNuevoPallet();
+                        });
+                        this.logInfo('Event listener para "Crear Nuevo Pallet" configurado');
+                    }
+
+                    // Cerrar modales al hacer click fuera
+                    document.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('modal')) {
+                            this.cerrarModal();
+                        }
+                    });
+                    
+                    // Drag & Drop para pallets
+                    const warehouse = document.getElementById('warehouse');
+                    if (warehouse) {
+                        warehouse.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                        });
+                        
+                        warehouse.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                        });
+                    }
+                    
+                    this.logInfo('Event listeners globales configurados');
+                } catch (error) {
+                    this.logError('Error configurando event listeners', error);
+                }
+            }
                 try {
                     const warehouse = document.getElementById('warehouse');
                     if (!warehouse) {
