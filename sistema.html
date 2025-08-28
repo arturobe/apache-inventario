@@ -1057,90 +1057,96 @@
                 }
             }
 
-            handleWarehouseMouseDown(e) {
+            inicializarArrastre() {
+                try {
+                    const self = this;
+                    
+                    document.addEventListener('mousemove', function(e) {
+                        self.handleUniversalMouseMove(e);
+                    });
+                    
+                    document.addEventListener('mouseup', function(e) {
+                        self.handleUniversalMouseUp(e);
+                    });
+                    
+                    document.addEventListener('touchmove', function(e) {
+                        self.handleUniversalTouchMove(e);
+                    }, { passive: false });
+                    
+                    document.addEventListener('touchend', function(e) {
+                        self.handleUniversalTouchEnd(e);
+                    });
+                    
+                    this.logInfo('Sistema de arrastre universal inicializado');
+                } catch (error) {
+                    this.logError('Error inicializando arrastre', error);
+                }
+            }
+
+            handleUniversalMouseDown(e, palletId) {
                 try {
                     e.preventDefault();
                     e.stopPropagation();
                     
-                    const pallet = e.target.closest('.pallet');
-                    if (!pallet) return;
-                    
-                    const palletId = pallet.dataset.pallet;
-                    
-                    if (palletId === 'temporal') {
-                        this.logInfo('Pallet temporal clickeado - no arrastrable');
-                        return;
-                    }
-                    
-                    this.handleMouseDown(e, palletId);
-                } catch (error) {
-                    this.logError('Error en mousedown de warehouse', error);
-                }
-            }
-
-            handleWarehouseTouchStart(e) {
-                try {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const pallet = e.target.closest('.pallet');
-                    if (!pallet) return;
-                    
-                    const palletId = pallet.dataset.pallet;
-                    
-                    if (palletId === 'temporal') {
-                        this.logInfo('Pallet temporal tocado - no arrastrable');
-                        return;
-                    }
-                    
-                    const touch = e.touches[0];
-                    this.handleMouseDown(touch, palletId);
-                } catch (error) {
-                    this.logError('Error en touchstart de warehouse', error);
-                }
-            }
-
-            handleMouseDown(e, palletId) {
-                try {
-                    if (this.iniciarArrastre(palletId)) {
-                        const rect = document.getElementById('warehouse').getBoundingClientRect();
-                        this.arrastre.posicion = {
+                    const rect = document.getElementById('warehouse').getBoundingClientRect();
+                    this.arrastre = {
+                        activo: true,
+                        palletId: palletId,
+                        posicion: {
                             x: e.clientX - rect.left,
                             y: e.clientY - rect.top
-                        };
-                        this.arrastre.inicial = { x: this.arrastre.posicion.x, y: this.arrastre.posicion.y };
-                    }
-                } catch (error) {
-                    this.logError('Error iniciando arrastre', error);
-                }
-            }
-
-            iniciarArrastre(palletId) {
-                try {
-                    if (palletId === 'temporal') {
-                        this.logInfo('Pallet temporal no es arrastrable');
-                        return false;
-                    }
-                    
-                    this.arrastre.activo = true;
-                    this.arrastre.palletId = palletId;
+                        },
+                        inicial: {
+                            x: e.clientX - rect.left,
+                            y: e.clientY - rect.top
+                        }
+                    };
                     
                     const pallet = document.querySelector('[data-pallet="' + palletId + '"]');
                     if (pallet) {
                         pallet.classList.add('dragging');
-                        pallet.style.zIndex = '1000';
                         document.body.style.cursor = 'grabbing';
                     }
                     
-                    this.logInfo('Iniciando arrastre del pallet P' + palletId);
-                    return true;
+                    this.logInfo('Arrastre iniciado en P' + palletId);
                 } catch (error) {
-                    this.logError('Error iniciando arrastre', error);
-                    return false;
+                    this.logError('Error iniciando arrastre mouse', error);
                 }
             }
 
-            handleMouseMove(e) {
+            handleUniversalTouchStart(e, palletId) {
+                try {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const touch = e.touches[0];
+                    const rect = document.getElementById('warehouse').getBoundingClientRect();
+                    
+                    this.arrastre = {
+                        activo: true,
+                        palletId: palletId,
+                        posicion: {
+                            x: touch.clientX - rect.left,
+                            y: touch.clientY - rect.top
+                        },
+                        inicial: {
+                            x: touch.clientX - rect.left,
+                            y: touch.clientY - rect.top
+                        }
+                    };
+                    
+                    const pallet = document.querySelector('[data-pallet="' + palletId + '"]');
+                    if (pallet) {
+                        pallet.classList.add('dragging');
+                    }
+                    
+                    this.logInfo('Arrastre táctil iniciado en P' + palletId);
+                } catch (error) {
+                    this.logError('Error iniciando arrastre touch', error);
+                }
+            }
+
+            handleUniversalMouseMove(e) {
                 if (!this.arrastre.activo) return;
                 
                 try {
@@ -1148,13 +1154,13 @@
                     const newX = e.clientX - rect.left;
                     const newY = e.clientY - rect.top;
                     
-                    this.moverPallet(newX, newY);
+                    this.moverPalletUniversal(newX, newY);
                 } catch (error) {
-                    this.logError('Error en mousemove', error);
+                    this.logError('Error en mousemove universal', error);
                 }
             }
 
-            handleTouchMove(e) {
+            handleUniversalTouchMove(e) {
                 if (!this.arrastre.activo) return;
                 
                 try {
@@ -1164,13 +1170,13 @@
                     const newX = touch.clientX - rect.left;
                     const newY = touch.clientY - rect.top;
                     
-                    this.moverPallet(newX, newY);
+                    this.moverPalletUniversal(newX, newY);
                 } catch (error) {
-                    this.logError('Error en touchmove', error);
+                    this.logError('Error en touchmove universal', error);
                 }
             }
 
-            moverPallet(x, y) {
+            moverPalletUniversal(x, y) {
                 try {
                     const pallet = document.querySelector('[data-pallet="' + this.arrastre.palletId + '"]');
                     if (!pallet) return;
@@ -1178,41 +1184,40 @@
                     const warehouse = document.getElementById('warehouse');
                     const warehouseRect = warehouse.getBoundingClientRect();
                     
-                    const limitedX = Math.max(0, Math.min(x - 10, warehouseRect.width - 20));
-                    const limitedY = Math.max(0, Math.min(y - 10, warehouseRect.height - 20));
+                    const limitedX = Math.max(5, Math.min(x - 9, warehouseRect.width - 25));
+                    const limitedY = Math.max(5, Math.min(y - 9, warehouseRect.height - 25));
                     
                     pallet.style.left = limitedX + 'px';
                     pallet.style.top = limitedY + 'px';
                     
                     this.arrastre.posicion = { x: limitedX, y: limitedY };
                 } catch (error) {
-                    this.logError('Error moviendo pallet', error);
+                    this.logError('Error moviendo pallet universal', error);
                 }
             }
 
-            handleMouseUp(e) {
-                this.terminarArrastre();
+            handleUniversalMouseUp(e) {
+                this.terminarArrastreUniversal();
             }
 
-            handleTouchEnd(e) {
-                this.terminarArrastre();
+            handleUniversalTouchEnd(e) {
+                this.terminarArrastreUniversal();
             }
 
-            async terminarArrastre() {
+            async terminarArrastreUniversal() {
                 if (!this.arrastre.activo) return;
                 
                 try {
                     const pallet = document.querySelector('[data-pallet="' + this.arrastre.palletId + '"]');
                     if (pallet) {
                         pallet.classList.remove('dragging');
-                        pallet.style.zIndex = '';
                         document.body.style.cursor = '';
                     }
                     
                     const deltaX = Math.abs(this.arrastre.posicion.x - this.arrastre.inicial.x);
                     const deltaY = Math.abs(this.arrastre.posicion.y - this.arrastre.inicial.y);
                     
-                    if (deltaX > 5 || deltaY > 5) {
+                    if (deltaX > 8 || deltaY > 8) {
                         await this.actualizarPosicionPallet(this.arrastre.palletId, this.arrastre.posicion.x, this.arrastre.posicion.y);
                         this.logInfo('Pallet P' + this.arrastre.palletId + ' reposicionado a (' + this.arrastre.posicion.x + ', ' + this.arrastre.posicion.y + ')');
                         
@@ -1227,7 +1232,7 @@
                     }
                     
                 } catch (error) {
-                    this.logError('Error terminando arrastre', error);
+                    this.logError('Error terminando arrastre universal', error);
                 } finally {
                     this.arrastre.activo = false;
                     this.arrastre.palletId = null;
@@ -1376,36 +1381,76 @@
                     }
                     
                     const warehouseRect = warehouse.getBoundingClientRect();
-                    const centroX = (warehouseRect.width / 2) - (CONFIG.PALLET_SIZE / 2);
-                    const centroY = (warehouseRect.height / 2) - (CONFIG.PALLET_SIZE / 2);
                     
-                    const posX = Math.max(10, centroX);
-                    const posY = Math.max(10, centroY);
+                    // Posicionamiento optimizado para Samsung Galaxy
+                    const centroX = Math.max(30, (warehouseRect.width * 0.3));
+                    const centroY = Math.max(30, (warehouseRect.height * 0.3));
 
                     const palletTemporal = document.createElement('div');
                     palletTemporal.className = 'pallet temporal';
                     palletTemporal.dataset.pallet = 'temporal';
-                    palletTemporal.title = 'Pallet temporal - Click para cargar material';
+                    palletTemporal.title = 'Nuevo pallet - Toca para cargar material';
                     palletTemporal.textContent = '?';
-                    palletTemporal.style.left = posX + 'px';
-                    palletTemporal.style.top = posY + 'px';
+                    
+                    // Estilos forzados para Samsung Galaxy
+                    palletTemporal.style.position = 'absolute';
+                    palletTemporal.style.left = centroX + 'px';
+                    palletTemporal.style.top = centroY + 'px';
+                    palletTemporal.style.width = '20px';
+                    palletTemporal.style.height = '20px';
+                    palletTemporal.style.backgroundColor = '#ffc107';
+                    palletTemporal.style.border = '2px solid #d39e00';
+                    palletTemporal.style.borderRadius = '3px';
                     palletTemporal.style.display = 'block';
+                    palletTemporal.style.visibility = 'visible';
+                    palletTemporal.style.opacity = '1';
+                    palletTemporal.style.zIndex = '15';
+                    palletTemporal.style.fontSize = '8px';
+                    palletTemporal.style.lineHeight = '16px';
+                    palletTemporal.style.textAlign = 'center';
+                    palletTemporal.style.color = 'white';
+                    palletTemporal.style.fontWeight = 'bold';
+                    palletTemporal.style.cursor = 'pointer';
+                    palletTemporal.style.transform = 'translateZ(0)';
                     
                     const self = this;
                     palletTemporal.addEventListener('click', function(e) {
                         e.preventDefault();
                         e.stopPropagation();
-                        self.abrirModalPalletTemporal(posX, posY);
+                        self.logInfo('Click en pallet temporal detectado');
+                        self.abrirModalPalletTemporal(centroX, centroY);
+                    });
+                    
+                    // Touch events específicos para Samsung
+                    palletTemporal.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        self.logInfo('Touch en pallet temporal detectado');
+                        self.abrirModalPalletTemporal(centroX, centroY);
                     });
                     
                     warehouse.appendChild(palletTemporal);
                     
-                    this.logInfo('Pallet temporal creado - se asignará número al cargar material');
+                    // Verificación post-creación para Samsung
+                    setTimeout(function() {
+                        const verificacion = warehouse.querySelector('[data-pallet="temporal"]');
+                        if (verificacion) {
+                            const rect = verificacion.getBoundingClientRect();
+                            self.logInfo('Pallet temporal creado - Dimensiones: ' + rect.width + 'x' + rect.height + ' Posición: (' + centroX + ', ' + centroY + ')');
+                            
+                            if (rect.width === 0) {
+                                self.logError('Pallet temporal invisible, aplicando fix Samsung');
+                                verificacion.style.cssText = 'position: absolute !important; left: ' + centroX + 'px !important; top: ' + centroY + 'px !important; width: 20px !important; height: 20px !important; background: #ffc107 !important; border: 2px solid #d39e00 !important; display: block !important; z-index: 50 !important; font-size: 8px !important; line-height: 16px !important; text-align: center !important; color: white !important; font-weight: bold !important; border-radius: 3px !important;';
+                            }
+                        }
+                    }, 200);
+                    
+                    this.logInfo('Pallet temporal creado para Samsung - posición (' + centroX + ', ' + centroY + ')');
                     
                     const self2 = this;
                     setTimeout(function() {
-                        self2.abrirModalPalletTemporal(posX, posY);
-                    }, 100);
+                        self2.abrirModalPalletTemporal(centroX, centroY);
+                    }, 300);
                     
                 } catch (error) {
                     this.logError('Error creando pallet temporal', error);
@@ -1540,36 +1585,144 @@
                 }
             }
 
-            crearPalletDefinitivo(numero, posX, posY) {
+            async crearPalletsVisuales() {
+                try {
+                    const warehouse = document.getElementById('warehouse');
+                    if (!warehouse) return;
+
+                    warehouse.innerHTML = '';
+                    
+                    const warehouseRect = warehouse.getBoundingClientRect();
+                    if (warehouseRect.width === 0 || warehouseRect.height === 0) {
+                        const self = this;
+                        setTimeout(function() { self.crearPalletsVisuales(); }, 500);
+                        return;
+                    }
+
+                    const self = this;
+                    Object.keys(this.inventario).forEach(function(palletId) {
+                        const datos = self.inventario[palletId];
+                        
+                        if (datos.total > 0) {
+                            self.crearPalletVisual(palletId, datos.posicion.x, datos.posicion.y, 'occupied');
+                        }
+                    });
+
+                    this.logInfo(Object.keys(this.inventario).length + ' pallets renderizados universalmente');
+                } catch (error) {
+                    this.logError('Error creando pallets visuales', error);
+                }
+            }
+
+            crearPalletVisual(palletId, posX, posY, tipo) {
                 const warehouse = document.getElementById('warehouse');
-                if (!warehouse) return;
+                if (!warehouse) return null;
+
+                const warehouseRect = warehouse.getBoundingClientRect();
+                const safeX = Math.max(5, Math.min(posX, warehouseRect.width - 25));
+                const safeY = Math.max(5, Math.min(posY, warehouseRect.height - 25));
 
                 const pallet = document.createElement('div');
-                pallet.className = 'pallet occupied';
-                pallet.dataset.pallet = numero;
-                pallet.title = 'Pallet P' + numero + ' - Click para gestionar';
-                pallet.textContent = numero;
-                pallet.style.left = posX + 'px';
-                pallet.style.top = posY + 'px';
-                pallet.style.display = 'block';
                 
+                // Configuración base universal
+                pallet.className = 'pallet ' + tipo;
+                pallet.dataset.pallet = palletId;
+                pallet.textContent = tipo === 'temporal' ? '?' : palletId;
+                
+                // Posicionamiento absoluto universal
+                pallet.style.cssText = 'position: absolute; left: ' + safeX + 'px; top: ' + safeY + 'px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-weight: bold; cursor: pointer; user-select: none; box-sizing: border-box;';
+                
+                // Colores según tipo
+                if (tipo === 'temporal') {
+                    pallet.style.backgroundColor = '#ecc94b';
+                    pallet.style.borderColor = '#d69e2e';
+                    pallet.title = 'Nuevo pallet - Toca para cargar material';
+                } else {
+                    pallet.style.backgroundColor = '#38a169';
+                    pallet.style.borderColor = '#2f855a';
+                    pallet.title = 'Pallet P' + palletId + ' - Toca para gestionar';
+                }
+                
+                pallet.style.border = '2px solid ' + pallet.style.borderColor;
+                pallet.style.color = 'white';
+                pallet.style.fontSize = '7px';
+                
+                // Event listeners universales
                 const self = this;
-                pallet.addEventListener('click', function() {
-                    self.logInfo('Click en pallet P' + numero);
-                    self.abrirModal(numero);
+                
+                pallet.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    self.logInfo('Click universal en pallet ' + (tipo === 'temporal' ? 'temporal' : 'P' + palletId));
+                    
+                    if (tipo === 'temporal') {
+                        self.abrirModalPalletTemporal(safeX, safeY);
+                    } else {
+                        self.abrirModal(palletId);
+                    }
                 });
                 
-                pallet.addEventListener('mousedown', function(e) {
-                    self.handleWarehouseMouseDown(e);
+                // Touch universal para iOS y Android
+                pallet.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (tipo === 'temporal') {
+                        self.abrirModalPalletTemporal(safeX, safeY);
+                    } else {
+                        self.abrirModal(palletId);
+                    }
                 });
                 
-                pallet.addEventListener('touchstart', function(e) {
-                    self.handleWarehouseTouchStart(e);
-                });
+                // Arrastre solo para pallets definitivos
+                if (tipo !== 'temporal') {
+                    pallet.addEventListener('mousedown', function(e) {
+                        self.handleUniversalMouseDown(e, palletId);
+                    });
+                    
+                    pallet.addEventListener('touchstart', function(e) {
+                        self.handleUniversalTouchStart(e, palletId);
+                    });
+                }
                 
                 warehouse.appendChild(pallet);
-                
-                this.logInfo('Pallet P' + numero + ' creado visualmente en posición (' + posX + ', ' + posY + ')');
+                return pallet;
+            }
+
+            async crearNuevoPallet() {
+                try {
+                    if (!this.supabase || !this.isOnline) {
+                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
+                        return;
+                    }
+
+                    const warehouse = document.getElementById('warehouse');
+                    if (!warehouse) {
+                        throw new Error('Warehouse no encontrado');
+                    }
+                    
+                    const warehouseRect = warehouse.getBoundingClientRect();
+                    const centroX = Math.max(20, (warehouseRect.width * 0.3));
+                    const centroY = Math.max(20, (warehouseRect.height * 0.3));
+
+                    this.crearPalletVisual('temporal', centroX, centroY, 'temporal');
+                    
+                    this.logInfo('Pallet temporal universal creado en (' + centroX + ', ' + centroY + ')');
+                    
+                    const self = this;
+                    setTimeout(function() {
+                        self.abrirModalPalletTemporal(centroX, centroY);
+                    }, 200);
+                    
+                } catch (error) {
+                    this.logError('Error creando pallet temporal', error);
+                    this.mostrarErrorUsuario('Error al crear pallet temporal');
+                }
+            }
+
+            crearPalletDefinitivo(numero, posX, posY) {
+                this.crearPalletVisual(numero, posX, posY, 'occupied');
+                this.logInfo('Pallet definitivo P' + numero + ' creado universalmente en (' + posX + ', ' + posY + ')');
             }
 
             abrirModal(palletId) {
