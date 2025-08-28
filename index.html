@@ -203,6 +203,7 @@
         .pallet.temporal {
             background: #ffc107;
             animation: pulse 1s infinite;
+            cursor: pointer;
         }
 
         .pallet.syncing {
@@ -512,14 +513,19 @@
                 this.ultimoPalletId = 0;
                 this.supabase = null;
                 
-                this.dragState = {
-                    isDragging: false,
-                    draggedPallet: null,
-                    startPos: { x: 0, y: 0 },
-                    offset: { x: 0, y: 0 },
-                    wasMoved: false,
-                    startTime: 0
+                this.arrastre = {
+                    activo: false,
+                    palletId: null,
+                    posicion: { x: 0, y: 0 },
+                    inicial: { x: 0, y: 0 }
                 };
+                
+                this.handleWarehouseMouseDown = this.handleWarehouseMouseDown.bind(this);
+                this.handleMouseMove = this.handleMouseMove.bind(this);
+                this.handleMouseUp = this.handleMouseUp.bind(this);
+                this.handleWarehouseTouchStart = this.handleWarehouseTouchStart.bind(this);
+                this.handleTouchMove = this.handleTouchMove.bind(this);
+                this.handleTouchEnd = this.handleTouchEnd.bind(this);
             }
 
             async init() {
@@ -708,8 +714,13 @@
                             datos.visible = true;
                             
                             pallet.addEventListener('click', () => {
+                                this.logInfo(`Click en pallet P${palletId}`);
                                 this.abrirModal(palletId);
                             });
+                            
+                            // Agregar eventos de arrastre solo a pallets definitivos
+                            pallet.addEventListener('mousedown', this.handleWarehouseMouseDown, { passive: false });
+                            pallet.addEventListener('touchstart', this.handleWarehouseTouchStart, { passive: false });
                             
                             warehouse.appendChild(pallet);
                         }
@@ -738,6 +749,7 @@
                             const timestampActual = new Date().toISOString();
                             let cambiosDetectados = false;
                             
+                            // 1. Verificar cambios en MATERIALES (contenido)
                             const { data: materialesRecientes, error: errorMateriales } = await this.supabase
                                 .from('materiales')
                                 .select('*')
@@ -751,6 +763,7 @@
                                 cambiosDetectados = true;
                             }
                             
+                            // 2. Verificar cambios en PALLETS (nuevos pallets)
                             const { data: palletsRecientes, error: errorPallets } = await this.supabase
                                 .from('pallets')
                                 .select('*')
@@ -785,6 +798,246 @@
                 }
             }
 
+            // Sistema de arrastre mejorado con validaciones
+            inicializarArrastre() {
+                try {
+                    const warehouse = document.getElementById('warehouse');
+                    if (!warehouse) return;
+                    
+                    document.addEventListener('mousemove', this.handleMouseMove);
+                    document.addEventListener('mouseup', this.handleMouseUp);
+                    document.addEventListener('touchmove', this.handleTouchMove, { passive: false });
+                    document.addEventListener('touchend', this.handleTouchEnd);
+                    
+                    this.logInfo('Sistema de arrastre inicializado');
+                } catch (error) {
+                    this.logError('Error inicializando arrastre', error);
+                }
+            }
+
+            handleWarehouseMouseDown(e) {
+                try {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const pallet = e.target.closest('.pallet');
+                    if (!pallet) return;
+                    
+                    const palletId = pallet.dataset.pallet;
+                    
+                    // Los pallets temporales NO son arrastrables
+                    if (palletId === 'temporal') {
+                        this.logInfo('Pallet temporal clickeado - abriendo modal para cargar material');
+                        return; // Sale sin iniciar arrastre
+                    }
+                    
+                    this.handleMouseDown(e, palletId);
+                } catch (error) {
+                    this.logError('Error en mousedown de warehouse', error);
+                }
+            }
+
+            handleWarehouseTouchStart(e) {
+                try {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const pallet = e.target.closest('.pallet');
+                    if (!pallet) return;
+                    
+                    const palletId = pallet.dataset.pallet;
+                    
+                    // Los pallets temporales NO son arrastrables
+                    if (palletId === 'temporal') {
+                        this.logInfo('Pallet temporal tocado - abriendo modal para cargar material');
+                        return; // Sale sin iniciar arrastre
+                    }
+                    
+                    const touch = e.touches[0];
+                    this.handleMouseDown(touch, palletId);
+                } catch (error) {
+                    this.logError('Error en touchstart de warehouse', error);
+                }
+            }
+
+            handleMouseDown(e, palletId) {
+                try {
+                    if (this.iniciarArrastre(palletId)) {
+                        const rect = document.getElementById('warehouse').getBoundingClientRect();
+                        this.arrastre.posicion = {
+                            x: e.clientX - rect.left,
+                            y: e.clientY - rect.top
+                        };
+                    }
+                } catch (error) {
+                    this.logError('Error iniciando arrastre', error);
+                }
+            }
+
+            // Validación de ID de pallet CORREGIDA
+            validarPalletId(palletId) {
+                if (!palletId || palletId === 'undefined') {
+                    throw new Error('ID de pallet no válido');
+                }
+                
+                // PERMITIR pallets temporales sin validar formato
+                if (palletId === 'temporal') {
+                    return palletId;
+                }
+                
+                // Verificar que sea un número de pallet válido (P1, P2, etc.)
+                if (!/^P?\d+$/.test(palletId)) {
+                    throw new Error(`ID de pallet inválido: ${palletId}`);
+                }
+                
+                return palletId.startsWith('P') ? palletId : `P${palletId}`;
+            }
+
+            // Iniciar arrastre CORREGIDO
+            iniciarArrastre(palletId) {
+                try {
+                    const validId = this.validarPalletId(palletId);
+                    
+                    // Los pallets temporales NO se pueden arrastrar
+                    if (validId === 'temporal') {
+                        this.logInfo('Pallet temporal no es arrastrable - usar modal para cargar material');
+                        return false;
+                    }
+                    
+                    this.arrastre.activo = true;
+                    this.arrastre.palletId = validId;
+                    this.arrastre.inicial = { ...this.arrastre.posicion };
+                    
+                    const pallet = document.querySelector(`[data-pallet="${palletId}"]`);
+                    if (pallet) {
+                        pallet.style.zIndex = '1000';
+                        pallet.style.transform = 'scale(1.1)';
+                        document.body.style.cursor = 'grabbing';
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    this.logError('Error iniciando arrastre', error);
+                    return false;
+                }
+            }
+
+            handleMouseMove(e) {
+                if (!this.arrastre.activo) return;
+                
+                try {
+                    const rect = document.getElementById('warehouse').getBoundingClientRect();
+                    const newX = e.clientX - rect.left;
+                    const newY = e.clientY - rect.top;
+                    
+                    this.moverPallet(newX, newY);
+                } catch (error) {
+                    this.logError('Error en mousemove', error);
+                }
+            }
+
+            handleTouchMove(e) {
+                if (!this.arrastre.activo) return;
+                
+                try {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const rect = document.getElementById('warehouse').getBoundingClientRect();
+                    const newX = touch.clientX - rect.left;
+                    const newY = touch.clientY - rect.top;
+                    
+                    this.moverPallet(newX, newY);
+                } catch (error) {
+                    this.logError('Error en touchmove', error);
+                }
+            }
+
+            moverPallet(x, y) {
+                try {
+                    const pallet = document.querySelector(`[data-pallet="${this.arrastre.palletId}"]`);
+                    if (!pallet) return;
+                    
+                    const warehouse = document.getElementById('warehouse');
+                    const warehouseRect = warehouse.getBoundingClientRect();
+                    
+                    // Limitar dentro del warehouse
+                    const limitedX = Math.max(0, Math.min(x - 10, warehouseRect.width - 20));
+                    const limitedY = Math.max(0, Math.min(y - 10, warehouseRect.height - 20));
+                    
+                    pallet.style.left = limitedX + 'px';
+                    pallet.style.top = limitedY + 'px';
+                    
+                    this.arrastre.posicion = { x: limitedX, y: limitedY };
+                } catch (error) {
+                    this.logError('Error moviendo pallet', error);
+                }
+            }
+
+            handleMouseUp(e) {
+                this.terminarArrastre();
+            }
+
+            handleTouchEnd(e) {
+                this.terminarArrastre();
+            }
+
+            async terminarArrastre() {
+                if (!this.arrastre.activo) return;
+                
+                try {
+                    const pallet = document.querySelector(`[data-pallet="${this.arrastre.palletId}"]`);
+                    if (pallet) {
+                        pallet.style.zIndex = '';
+                        pallet.style.transform = '';
+                        document.body.style.cursor = '';
+                    }
+                    
+                    // Actualizar posición en DB si se movió significativamente
+                    const deltaX = Math.abs(this.arrastre.posicion.x - this.arrastre.inicial.x);
+                    const deltaY = Math.abs(this.arrastre.posicion.y - this.arrastre.inicial.y);
+                    
+                    if (deltaX > 5 || deltaY > 5) {
+                        await this.actualizarPosicionPallet(this.arrastre.palletId, this.arrastre.posicion.x, this.arrastre.posicion.y);
+                        this.logInfo(`Pallet ${this.arrastre.palletId} reposicionado a (${this.arrastre.posicion.x}, ${this.arrastre.posicion.y})`);
+                    } else {
+                        // Si no se movió, abrir modal
+                        this.abrirModal(this.arrastre.palletId);
+                    }
+                    
+                } catch (error) {
+                    this.logError('Error terminando arrastre', error);
+                } finally {
+                    this.arrastre.activo = false;
+                    this.arrastre.palletId = null;
+                }
+            }
+
+            async actualizarPosicionPallet(palletId, x, y) {
+                try {
+                    if (!this.supabase || !this.isOnline) return;
+                    
+                    const { error } = await this.supabase
+                        .from('pallets')
+                        .update({
+                            posicion_x: Math.round(x),
+                            posicion_y: Math.round(y)
+                        })
+                        .eq('numero', palletId);
+                    
+                    if (error) throw error;
+                    
+                    // Actualizar inventario local
+                    if (this.inventario[palletId]) {
+                        this.inventario[palletId].posicion = { x: Math.round(x), y: Math.round(y) };
+                    }
+                    
+                    this.logInfo(`Posición ${palletId} actualizada en DB: (${Math.round(x)}, ${Math.round(y)})`);
+                    
+                } catch (error) {
+                    this.logError('Error actualizando posición en DB', error);
+                }
+            }
+
             async crearNuevoPallet() {
                 try {
                     if (!this.supabase || !this.isOnline) {
@@ -813,11 +1066,21 @@
                     palletTemporal.style.top = posY + 'px';
                     palletTemporal.style.display = 'block';
                     
+                    // Solo agregar evento click (NO arrastre)
+                    palletTemporal.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.abrirModalPalletTemporal(posX, posY);
+                    });
+                    
                     warehouse.appendChild(palletTemporal);
                     
                     this.logInfo('Pallet temporal creado - se asignará número al cargar material');
                     
-                    this.abrirModalPalletTemporal(posX, posY);
+                    // Abrir modal automáticamente
+                    setTimeout(() => {
+                        this.abrirModalPalletTemporal(posX, posY);
+                    }, 100);
                     
                 } catch (error) {
                     this.logError('Error creando pallet temporal', error);
@@ -1042,7 +1305,6 @@
                     this.actualizarContadores();
                     
                     this.logInfo(`Pallet P${numeroAsignado} creado exitosamente con material: ${descripcion}`);
-                    alert(`Pallet P${numeroAsignado} creado exitosamente con ${cantidad} ${unidad} de ${descripcion}`);
                     
                 } catch (error) {
                     this.logError('Error procesando pallet temporal', error);
@@ -1064,8 +1326,13 @@
                 pallet.style.display = 'block';
                 
                 pallet.addEventListener('click', () => {
+                    this.logInfo(`Click en pallet P${numero}`);
                     this.abrirModal(numero);
                 });
+                
+                // Agregar eventos de arrastre
+                pallet.addEventListener('mousedown', this.handleWarehouseMouseDown, { passive: false });
+                pallet.addEventListener('touchstart', this.handleWarehouseTouchStart, { passive: false });
                 
                 warehouse.appendChild(pallet);
                 
@@ -1354,8 +1621,6 @@
                     
                     this.mostrarSeccion('inventario', palletId);
                     
-                    alert(`Material agregado exitosamente a pallet P${palletId}:\n${cantidad} ${unidad} de ${descripcion}`);
-                    
                 } catch (error) {
                     this.logError('Error agregando material al pallet', error);
                     this.mostrarErrorUsuario('Error al agregar material: ' + error.message);
@@ -1517,3 +1782,268 @@
                     this.logInfo(`Despacho completo P${id} - ${datos.materiales.length} materiales despachados, número liberado`);
                     this.cerrarModal();
                     this.actualizarContadores();
+                    
+                    alert(`Pallet P${id} despachado completamente.\nNúmero liberado para reutilizar.`);
+                    
+                } catch (error) {
+                    this.logError('Error en despacho completo', error);
+                    this.mostrarErrorUsuario('Error al despachar pallet: ' + error.message);
+                }
+            }
+
+            // Funciones de búsqueda
+            buscarMateriales() {
+                try {
+                    const tipo = document.getElementById('search-tipo')?.value || '';
+                    const circunf = document.getElementById('search-circunf')?.value || '';
+                    const espesor = document.getElementById('search-espesor')?.value || '';
+                    const angulo = document.getElementById('search-angulo')?.value || '';
+
+                    const criterios = { tipo, circunf, espesor, angulo };
+                    this.logInfo('Realizando búsqueda', criterios);
+
+                    const resultados = [];
+                    Object.keys(this.inventario).forEach(palletId => {
+                        const datos = this.inventario[palletId];
+                        datos.materiales.forEach(material => {
+                            let coincide = true;
+
+                            if (tipo && !material.tipo.toLowerCase().includes(tipo.toLowerCase())) {
+                                coincide = false;
+                            }
+                            if (circunf && material.circunferencia && !material.circunferencia.toString().includes(circunf)) {
+                                coincide = false;
+                            }
+                            if (espesor && material.espesor && !material.espesor.toString().includes(espesor)) {
+                                coincide = false;
+                            }
+                            if (angulo && material.tipo && !material.tipo.includes(angulo)) {
+                                coincide = false;
+                            }
+
+                            if (coincide) {
+                                resultados.push({
+                                    ...material,
+                                    pallet: palletId
+                                });
+                            }
+                        });
+                    });
+
+                    this.mostrarResultados(resultados);
+                    this.logInfo(`Búsqueda completada: ${resultados.length} resultados`);
+
+                } catch (error) {
+                    this.logError('Error en búsqueda', error);
+                }
+            }
+
+            mostrarResultados(resultados) {
+                const contenedor = document.getElementById('resultados-busqueda');
+                const contenidoResultados = document.getElementById('contenido-resultados');
+                
+                if (!contenedor || !contenidoResultados) return;
+
+                if (resultados.length === 0) {
+                    contenedor.style.display = 'none';
+                    return;
+                }
+
+                contenidoResultados.innerHTML = resultados.map(item => `
+                    <div style="background: rgba(255,255,255,0.1); padding: 8px; margin: 4px 0; border-radius: 4px; cursor: pointer;"
+                         onclick="inventorySystem.abrirModal(${item.pallet})">
+                        <strong style="color: white;">P${item.pallet}</strong> - 
+                        <span style="color: #a0aec0;">${item.descripcion || item.tipo}</span><br>
+                        <small style="color: #cbd5e0;">
+                            ${item.cantidad} ${item.unidad} | ${item.proveedor}
+                        </small>
+                    </div>
+                `).join('');
+
+                contenedor.style.display = 'block';
+            }
+
+            limpiarBusqueda() {
+                try {
+                    document.getElementById('search-tipo').value = '';
+                    document.getElementById('search-circunf').value = '';
+                    document.getElementById('search-espesor').value = '';
+                    document.getElementById('search-angulo').value = '';
+                    
+                    const contenedor = document.getElementById('resultados-busqueda');
+                    if (contenedor) {
+                        contenedor.style.display = 'none';
+                    }
+                    
+                    this.logInfo('Búsqueda limpiada');
+                } catch (error) {
+                    this.logError('Error limpiando búsqueda', error);
+                }
+            }
+
+            // Funciones de soporte
+            cerrarModal() {
+                try {
+                    const modal = document.getElementById('modal');
+                    if (modal) {
+                        modal.classList.remove('active');
+                        this.logInfo('Modal cerrado');
+                    }
+                } catch (error) {
+                    this.logError('Error cerrando modal', error);
+                }
+            }
+
+            cambiarUsuario() {
+                try {
+                    const selector = document.getElementById('usuario-selector');
+                    if (selector) {
+                        this.usuarioActual = selector.value;
+                        this.logInfo(`Usuario cambiado a: ${this.usuarioActual}`);
+                    }
+                } catch (error) {
+                    this.logError('Error cambiando usuario', error);
+                }
+            }
+
+            actualizarContadores() {
+                try {
+                    const totalPallets = Object.keys(this.inventario).length;
+                    const palletsOcupados = Object.keys(this.inventario).filter(id => 
+                        this.inventario[id].total > 0
+                    ).length;
+
+                    const contadorPallets = document.getElementById('contador-pallets');
+                    const contadorOcupados = document.getElementById('contador-ocupados');
+
+                    if (contadorPallets) contadorPallets.textContent = totalPallets;
+                    if (contadorOcupados) contadorOcupados.textContent = palletsOcupados;
+
+                } catch (error) {
+                    this.logError('Error actualizando contadores', error);
+                }
+            }
+
+            actualizarEstadoConexion(estado) {
+                try {
+                    const statusElement = document.getElementById('connection-status');
+                    if (!statusElement) return;
+
+                    statusElement.className = `connection-status ${estado}`;
+                    
+                    switch(estado) {
+                        case 'connected':
+                            statusElement.textContent = 'Conectado';
+                            break;
+                        case 'connecting':
+                            statusElement.textContent = 'Conectando...';
+                            break;
+                        case 'disconnected':
+                            statusElement.textContent = 'Desconectado';
+                            break;
+                    }
+                } catch (error) {
+                    this.logError('Error actualizando estado de conexión', error);
+                }
+            }
+
+            iniciarHeartbeat() {
+                try {
+                    this.heartbeatInterval = setInterval(() => {
+                        this.verificarSaludSistema();
+                    }, CONFIG.HEARTBEAT_INTERVAL);
+                    
+                    this.logInfo('Heartbeat iniciado');
+                } catch (error) {
+                    this.logError('Error iniciando heartbeat', error);
+                }
+            }
+
+            verificarSaludSistema() {
+                try {
+                    const ahora = Date.now();
+                    const stats = {
+                        palletsCreados: Object.keys(this.inventario).length,
+                        erroresRecientes: this.errorLog.filter(e => (ahora - e.timestamp) < 300000).length, // Últimos 5 minutos
+                        memoriaUsada: Math.round(JSON.stringify(this.inventario).length / 1024), // KB aproximados
+                        tiempoActivo: Math.round((ahora - this.startTime) / 1000) // segundos
+                    };
+                    
+                    if (stats.erroresRecientes > 10) {
+                        this.logWarning('Muchos errores recientes detectados', stats);
+                    }
+                    
+                    // Limpiar logs antiguos
+                    this.errorLog = this.errorLog.filter(e => (ahora - e.timestamp) < 3600000); // Última hora
+                    
+                } catch (error) {
+                    this.logError('Error en verificación de salud', error);
+                }
+            }
+
+            // Sistema de logging
+            logInfo(mensaje, datos = null) {
+                const timestamp = new Date().toISOString();
+                console.log(`%c[${timestamp}] INFO: ${mensaje}`, 'color: #4a90e2', datos || '');
+            }
+
+            logWarning(mensaje, datos = null) {
+                const timestamp = new Date().toISOString();
+                console.warn(`%c[${timestamp}] WARNING: ${mensaje}`, 'color: #f5a623', datos || '');
+            }
+
+            logError(mensaje, error = null) {
+                const timestamp = new Date().toISOString();
+                console.error(`%c[${timestamp}] ERROR: ${mensaje}`, 'color: #d0021b', error);
+                
+                this.errorLog.push({
+                    timestamp: Date.now(),
+                    mensaje,
+                    error: error?.message || error
+                });
+            }
+
+            mostrarErrorUsuario(mensaje) {
+                alert(`Error: ${mensaje}`);
+            }
+        }
+
+        // Funciones globales
+        function cerrarModal() {
+            if (window.inventorySystem) {
+                window.inventorySystem.cerrarModal();
+            }
+        }
+
+        function cambiarUsuario() {
+            if (window.inventorySystem) {
+                window.inventorySystem.cambiarUsuario();
+            }
+        }
+
+        function buscarMateriales() {
+            if (window.inventorySystem) {
+                window.inventorySystem.buscarMateriales();
+            }
+        }
+
+        function limpiarBusqueda() {
+            if (window.inventorySystem) {
+                window.inventorySystem.limpiarBusqueda();
+            }
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                window.inventorySystem = new InventorySystem();
+                window.inventorySystem.startTime = Date.now();
+                await window.inventorySystem.init();
+            } catch (error) {
+                console.error('Error crítico en inicialización:', error);
+                alert('Error crítico al inicializar el sistema. Recarga la página.');
+            }
+        });
+    </script>
+</body>
+</html>
