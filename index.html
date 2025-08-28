@@ -637,11 +637,12 @@
                 this.mostrarErrorUsuario('Funcionando en modo local - los datos no se sincronizarán');
             }
 
-            // CARGAR INVENTARIO DESDE BASE DE DATOS
+            // CARGAR INVENTARIO DESDE BASE DE DATOS (CORREGIDO PARA NUEVA LÓGICA)
             async cargarInventarioDesdeDB() {
                 try {
                     if (!this.supabase || !this.isOnline) return;
 
+                    // Solo cargar materiales activos y sus pallets asociados
                     const { data: materiales, error } = await this.supabase
                         .from('materiales')
                         .select(`
@@ -657,7 +658,7 @@
                     this.inventario = {};
                     this.ultimoPalletId = 0;
 
-                    // Cargar materiales desde la base de datos
+                    // Solo procesar pallets que realmente tienen materiales
                     if (materiales && materiales.length > 0) {
                         const palletsMap = new Map();
                         
@@ -670,7 +671,7 @@
                                     total: 0,
                                     created: material.pallets.created_at || new Date().toISOString(),
                                     lastUpdated: new Date().toISOString(),
-                                    visible: false,
+                                    visible: true, // Los pallets con material siempre son visibles
                                     posicion: {
                                         x: material.pallets.posicion_x || 50,
                                         y: material.pallets.posicion_y || 50
@@ -704,7 +705,7 @@
                     }
 
                     await this.crearPalletsVisuales();
-                    this.logInfo(`Inventario cargado: ${materiales?.length || 0} materiales en ${Object.keys(this.inventario).length} pallets`);
+                    this.logInfo(`Inventario cargado: ${materiales?.length || 0} materiales en ${Object.keys(this.inventario).length} pallets con material`);
 
                 } catch (error) {
                     this.logError('Error cargando inventario desde DB', error);
@@ -712,7 +713,7 @@
                 }
             }
 
-            // CREAR PALLETS VISUALES BASADOS EN DATOS DE DB
+            // CREAR PALLETS VISUALES SOLO CON MATERIAL (SIMPLIFICADO)
             async crearPalletsVisuales() {
                 try {
                     const warehouse = document.getElementById('warehouse');
@@ -720,33 +721,37 @@
 
                     warehouse.innerHTML = '';
 
+                    // Solo crear pallets que tienen materiales
                     Object.keys(this.inventario).forEach(palletId => {
                         const datos = this.inventario[palletId];
-                        const pallet = document.createElement('div');
                         
-                        pallet.className = datos.total > 0 ? 'pallet occupied' : 'pallet empty';
-                        pallet.dataset.pallet = palletId;
-                        pallet.title = `Pallet P${palletId} - Click para gestionar`;
-                        pallet.textContent = palletId;
-                        
-                        // Aplicar posición desde base de datos
-                        pallet.style.left = datos.posicion.x + 'px';
-                        pallet.style.top = datos.posicion.y + 'px';
-                        
-                        // Mostrar solo pallets con inventario
+                        // Solo mostrar pallets con material
                         if (datos.total > 0) {
+                            const pallet = document.createElement('div');
+                            
+                            pallet.className = 'pallet occupied';
+                            pallet.dataset.pallet = palletId;
+                            pallet.title = `Pallet P${palletId} - Click para gestionar - ${datos.total} unidades`;
+                            pallet.textContent = palletId;
+                            
+                            // Aplicar posición desde base de datos
+                            pallet.style.left = datos.posicion.x + 'px';
+                            pallet.style.top = datos.posicion.y + 'px';
                             pallet.style.display = 'flex';
                             datos.visible = true;
-                        } else {
-                            pallet.style.display = 'none';
-                            datos.visible = false;
+                            
+                            this.aplicarEstilosPallet(pallet);
+                            
+                            // ASIGNAR EVENT LISTENERS
+                            pallet.addEventListener('click', () => {
+                                this.abrirModal(palletId);
+                            });
+                            
+                            warehouse.appendChild(pallet);
                         }
-                        
-                        this.aplicarEstilosPallet(pallet);
-                        warehouse.appendChild(pallet);
                     });
 
-                    this.logInfo('Pallets visuales creados desde base de datos');
+                    this.logInfo(`${Object.keys(this.inventario).length} pallets con material renderizados visualmente`);
                 } catch (error) {
                     this.logError('Error creando pallets visuales', error);
                 }
