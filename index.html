@@ -3,578 +3,516 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Inventario - Pallets Apache</title>
+    <title>Control de Inventario - Pallets Mínimos</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #2d3748; 
+            color: white;
         }
 
         .header {
-            text-align: center;
-            margin-bottom: 30px;
-            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .status-bar {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            background: #1a202c;
+            padding: 10px 15px;
+            border-bottom: 2px solid #4a5568;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
+            min-height: 60px;
         }
 
-        .status-item {
+        .header h1 {
+            font-size: 18px;
+            margin: 0;
+        }
+
+        .user-selector {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 15px;
-            background: white;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 12px;
         }
 
-        .status-online { color: #28a745; }
-        .status-offline { color: #dc3545; }
-        .status-syncing { color: #ffc107; }
-
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            text-decoration: none;
+        .user-selector select {
+            padding: 4px 8px;
+            border-radius: 4px;
+            background: #4a5568;
             color: white;
+            border: 1px solid #718096;
+            font-size: 12px;
         }
 
-        .btn-primary {
-            background: linear-gradient(45deg, #007bff, #0056b3);
-            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        .connection-status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
         }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
-        }
+        .connected { background: #38a169; color: white; }
+        .connecting { background: #ed8936; color: white; }
+        .disconnected { background: #e53e3e; color: white; }
 
-        .btn-success {
-            background: linear-gradient(45deg, #28a745, #1e7e34);
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-danger {
-            background: linear-gradient(45deg, #dc3545, #c82333);
-        }
-
-        .warehouse-container {
-            background: #f8f9fa;
-            border: 3px dashed #dee2e6;
-            border-radius: 15px;
-            position: relative;
-            height: 600px;
-            margin-bottom: 30px;
+        .main-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: calc(100vh - 60px);
+            gap: 10px;
+            padding: 10px;
             overflow: hidden;
         }
 
-        .warehouse-grid {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-        }
-
-        .pallet {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            border-radius: 12px;
-            cursor: move;
+        .sidebar {
+            background: #4a5568;
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
+            gap: 15px;
+        }
+
+        .search-panel {
+            background: transparent;
+            padding: 0;
+            margin: 0;
+        }
+
+        .search-panel h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
             color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .search-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-field label {
+            color: white;
+            font-size: 11px;
+            margin-bottom: 2px;
+            font-weight: bold;
+        }
+
+        .form-field input, .form-field select {
+            padding: 6px;
+            border: 1px solid #718096;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .btn {
+            padding: 6px 10px;
+            background: #2d3748;
+            border: 1px solid #718096;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .btn:hover { background: #1a202c; }
+        .btn-search { background: #38a169; }
+        .btn-clear { background: #e53e3e; }
+
+        .btn-full-width {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .recent-activity {
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            flex-grow: 1;
+            min-height: 0;
+        }
+
+        .recent-activity h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        .activity-container {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .warehouse {
+            flex-grow: 1;
+            background-color: #1a202c;
+            background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400"%3E%3Crect x="10" y="10" width="200" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="220" y="10" width="70" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="10" y="200" width="200" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="220" y="200" width="70" height="180" fill="%23a2c2d6" stroke="%23333" stroke-width="2"/%3E%3Crect x="150" y="250" width="40" height="20" fill="%23666" stroke="%23333" stroke-width="1"/%3E%3Cpath d="M150 255h40M150 260h40M150 265h40" stroke="%23333" stroke-width="0.5"/%3E%3C/svg%3E');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            border: 3px solid #4a5568;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            padding: 10px;
+        }
+
+        /* PALLETS ENTERPRISE - 20px x 20px (tamaño consistente) */
+        .pallet {
+            width: 20px;
+            height: 20px;
+            background: #e53e3e;
+            position: absolute;
+            cursor: crosshair;
+            border: 1px solid #fff;
+            margin: 0;
+            padding: 0;
+            font-size: 0;
+            line-height: 0;
+            transition: all 0.1s ease;
             user-select: none;
+            border-radius: 2px;
         }
 
         .pallet:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-        }
-
-        .pallet.active {
-            transform: scale(1.1);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            border: 2px solid #ffd700;
+            box-shadow: 0 0 6px rgba(255, 215, 0, 0.6);
             z-index: 10;
         }
 
-        .pallet.empty {
-            background: linear-gradient(45deg, #e74c3c, #c0392b);
-            border: 3px solid #a93226;
+        .pallet.occupied {
+            background: #38a169;
         }
 
-        .pallet.partial {
-            background: linear-gradient(45deg, #f39c12, #e67e22);
-            border: 3px solid #d68910;
+        .pallet.syncing {
+            background: #ed8936;
+            animation: pulse 1s infinite;
         }
 
-        .pallet.full {
-            background: linear-gradient(45deg, #27ae60, #229954);
-            border: 3px solid #1e8449;
+        .pallet.dragging {
+            border: 3px solid #ffffff;
+            background: #ffd700;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+            z-index: 100;
         }
 
-        .pallet-number {
-            font-size: 16px;
-            margin-bottom: 4px;
+        .pallet.error {
+            background: #dc2626;
+            animation: shake 0.5s ease-in-out;
         }
 
-        .pallet-quantity {
-            font-size: 12px;
-            opacity: 0.9;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+        }
+
+        /* INDICADORES DE ESTADO ENTERPRISE */
+        .pallet::after {
+            content: '';
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            display: none;
+        }
+
+        .pallet.occupied::after {
+            display: block;
+            background: #10b981;
+        }
+
+        .pallet.syncing::after {
+            display: block;
+            background: #f59e0b;
+            animation: pulse 0.8s infinite;
+        }
+
+        .pallet.error::after {
+            display: block;
+            background: #ef4444;
+        }
+
+        .search-results {
+            background: #4a5568;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .search-results h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: white;
+        }
+
+        .activity-item {
+            background: rgba(255,255,255,0.1);
+            padding: 6px;
+            margin: 4px 0;
+            border-radius: 4px;
+            border-left: 3px solid #38a169;
+            font-size: 11px;
+            color: white;
+        }
+
+        .status {
+            display: none !important;
         }
 
         .modal {
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
+            background: rgba(0,0,0,0.8);
             z-index: 1000;
-            backdrop-filter: blur(5px);
         }
 
-        .modal.show {
-            display: flex;
+        .modal.active { 
+            display: flex; 
+            align-items: flex-end;
         }
 
         .modal-content {
+            width: 100%;
             background: white;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
+            color: black;
+            border-radius: 15px 15px 0 0;
+            max-height: 90vh;
             overflow-y: auto;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            animation: modalSlideIn 0.3s ease;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
         }
 
         .modal-header {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: #4a5568;
             color: white;
-            padding: 20px;
-            border-radius: 20px 20px 0 0;
+            padding: 15px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .modal-header h3 {
-            margin: 0;
-            font-size: 1.5em;
-        }
-
-        .close-btn {
-            background: none;
+        .modal-close {
+            background: #e53e3e;
             border: none;
             color: white;
-            font-size: 24px;
+            padding: 8px 12px;
+            border-radius: 4px;
             cursor: pointer;
-            padding: 5px;
-            border-radius: 50%;
-            transition: background 0.3s;
-        }
-
-        .close-btn:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .modal-body {
-            padding: 25px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e9ecef;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-        }
-
-        .inventory-list {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .inventory-item {
-            background: white;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            border-left: 4px solid #007bff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .inventory-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .item-info {
-            flex-grow: 1;
-        }
-
-        .item-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .item-details {
-            font-size: 14px;
-            color: #666;
-            margin-top: 4px;
-        }
-
-        .item-actions {
-            display: flex;
-            gap: 8px;
-        }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 14px;
-            border-radius: 6px;
-        }
-
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .summary-card {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-left: 5px solid #007bff;
-        }
-
-        .summary-card h4 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 1.1em;
-        }
-
-        .summary-card .value {
-            font-size: 2em;
+            margin-bottom: 5px;
             font-weight: bold;
-            color: #007bff;
+            color: #2d3748;
         }
 
-        .movements-table {
+        .form-group input, .form-group select {
             width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
         }
 
-        .movements-table th {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background: #38a169;
             color: white;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
         }
 
-        .movements-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #f1f1f1;
+        .btn-danger {
+            padding: 6px 10px;
+            background: #e53e3e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
         }
 
-        .movements-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .tag {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .tag.entrada { background: #d4edda; color: #155724; }
-        .tag.salida { background: #f8d7da; color: #721c24; }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
+        /* Responsive para pantallas pequeñas */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
             }
             
-            .warehouse-container {
-                height: 400px;
+            .sidebar {
+                max-height: 200px;
+                overflow-y: auto;
+            }
+            
+            .search-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 5px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 5px;
+                padding: 8px;
+            }
+            
+            .header h1 {
+                font-size: 16px;
             }
             
             .pallet {
-                width: 60px;
-                height: 60px;
-                font-size: 12px;
+                width: 2px;
+                height: 2px;
             }
             
-            .controls {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-                justify-content: center;
+            .pallet:hover {
+                width: 6px;
+                height: 6px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🏭 Control de Inventario Apache</h1>
-            <p>Sistema de control de materiales de aislación - Multi-usuario</p>
+    <div class="header">
+        <div class="user-selector">
+            <label>Usuario:</label>
+            <select id="usuario-selector" onchange="cambiarUsuario()">
+                <option value="Usuario1">Usuario 1</option>
+                <option value="Usuario2">Usuario 2</option>
+                <option value="Usuario3">Usuario 3</option>
+            </select>
         </div>
-
-        <!-- Barra de estado -->
-        <div class="status-bar">
-            <div class="status-item">
-                <span class="status-indicator" id="connection-status">🔴</span>
-                <span id="connection-text">Conectando...</span>
-            </div>
-            <div class="status-item">
-                📦 <span id="total-pallets">0</span> Pallets activos
-            </div>
-            <div class="status-item">
-                📋 <span id="total-materials">0</span> Materiales en inventario
-            </div>
-            <div class="status-item">
-                🕒 Última sync: <span id="last-sync">--:--</span>
-            </div>
-        </div>
-
-        <!-- Controles principales -->
-        <div class="controls">
-            <button class="btn btn-primary" onclick="inventorySystem.crearNuevoPallet()">
-                ➕ Crear Nuevo Pallet
-            </button>
-            <button class="btn btn-success" onclick="inventorySystem.abrirModalRecepcion()">
-                📥 Recibir Material
-            </button>
-            <button class="btn btn-primary" onclick="inventorySystem.generarReporte()">
-                📊 Generar Reporte
-            </button>
-            <button class="btn btn-primary" onclick="inventorySystem.sincronizarManual()">
-                🔄 Sincronizar Ahora
-            </button>
-        </div>
-
-        <!-- Almacén visual -->
-        <div class="warehouse-container" id="warehouse">
-            <div class="warehouse-grid"></div>
-            <!-- Los pallets se generan dinámicamente aquí -->
-        </div>
-
-        <!-- Resumen estadístico -->
-        <div class="summary-cards">
-            <div class="summary-card">
-                <h4>Total Pallets</h4>
-                <div class="value" id="summary-pallets">0</div>
-            </div>
-            <div class="summary-card">
-                <h4>Materiales Únicos</h4>
-                <div class="value" id="summary-materials">0</div>
-            </div>
-            <div class="summary-card">
-                <h4>Pallets Vacíos</h4>
-                <div class="value" id="summary-empty">0</div>
-            </div>
-            <div class="summary-card">
-                <h4>Utilización</h4>
-                <div class="value" id="summary-usage">0%</div>
-            </div>
+        
+        <h1>Control de Inventario</h1>
+        
+        <div id="connection-status" class="connection-status connected">
+            Conectado
         </div>
     </div>
 
-    <!-- Modal para recepción de material -->
-    <div id="modal-recepcion" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>📥 Recepción de Material</h3>
-                <button class="close-btn" onclick="inventorySystem.cerrarModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="form-recepcion">
-                    <div class="form-group">
-                        <label for="pallet-select">Pallet de Destino:</label>
-                        <select id="pallet-select" class="form-control" required>
-                            <option value="">Seleccionar pallet...</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="material-tipo">Tipo de Material:</label>
-                        <select id="material-tipo" class="form-control" required>
-                            <option value="">Seleccionar tipo...</option>
+    <div class="main-container">
+        <!-- SIDEBAR CON BUSCADOR Y ACTIVIDAD -->
+        <div class="sidebar">
+            <!-- BUSCADOR OPTIMIZADO -->
+            <div class="search-panel">
+                <h3>Buscador</h3>
+                
+                <div class="search-grid">
+                    <div class="form-field">
+                        <label>Tipo:</label>
+                        <select id="search-tipo">
+                            <option value="">Todos</option>
                             <option value="Lamina">Lámina</option>
                             <option value="Strap">Strap</option>
-                            <option value="Codo 90">Codo 90°</option>
-                            <option value="Codo 45">Codo 45°</option>
+                            <option value="90">Codo 90°</option>
+                            <option value="45">Codo 45°</option>
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label for="material-circunferencia">Circunferencia (pulgadas):</label>
-                        <input type="text" id="material-circunferencia" class="form-control" 
-                               placeholder="Ej: 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30" required>
+                    
+                    <div class="form-field">
+                        <label>Circunferencia ("):</label>
+                        <input type="text" id="search-circunf" placeholder="12">
                     </div>
-
-                    <div class="form-group">
-                        <label for="material-espesor">Espesor (pulgadas):</label>
-                        <input type="text" id="material-espesor" class="form-control" 
-                               placeholder="Ej: 1, 1.5, 2, 2.5, 3" required>
+                    
+                    <div class="form-field">
+                        <label>Espesor ("):</label>
+                        <input type="text" id="search-espesor" placeholder="1.5">
                     </div>
-
-                    <div class="form-group">
-                        <label for="material-cantidad">Cantidad:</label>
-                        <input type="number" id="material-cantidad" class="form-control" min="1" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="material-unidad">Unidad:</label>
-                        <select id="material-unidad" class="form-control" required>
-                            <option value="">Seleccionar unidad...</option>
-                            <option value="Pies lineales">Pies lineales</option>
-                            <option value="Piezas">Piezas</option>
+                    
+                    <div class="form-field">
+                        <label>Ángulo:</label>
+                        <select id="search-angulo">
+                            <option value="">-</option>
+                            <option value="45">45°</option>
+                            <option value="90">90°</option>
                         </select>
                     </div>
+                </div>
+                
+                <button class="btn btn-search btn-full-width" onclick="buscarMateriales()">Buscar</button>
+                <button class="btn btn-clear btn-full-width" onclick="limpiarBusqueda()">Limpiar</button>
+            </div>
 
-                    <div class="form-group">
-                        <label for="material-proveedor">Proveedor:</label>
-                        <input type="text" id="material-proveedor" class="form-control" 
-                               placeholder="Nombre del proveedor" required>
-                    </div>
+            <!-- ACTIVIDAD RECIENTE -->
+            <div class="recent-activity">
+                <h3>Actividad Reciente</h3>
+                <div class="activity-container" id="actividad-reciente"></div>
+            </div>
 
-                    <div class="form-group">
-                        <label for="material-observaciones">Observaciones:</label>
-                        <textarea id="material-observaciones" class="form-control" rows="3" 
-                                placeholder="Información adicional (opcional)"></textarea>
-                    </div>
+            <!-- CONTROL DE PALLETS -->
+            <div style="margin-top: 15px; padding: 10px; border-top: 1px solid #718096;">
+                <h3 style="color: white; font-size: 12px; margin-bottom: 8px;">Gestión de Pallets</h3>
+                <button class="btn btn-search btn-full-width" onclick="inventorySystem.crearNuevoPallet()">
+                    Crear Nuevo Pallet
+                </button>
+                <div style="margin-top: 8px; font-size: 10px; color: #a0aec0;">
+                    <span>Total pallets: </span><span id="contador-pallets">0</span><br>
+                    <span>Ocupados: </span><span id="contador-ocupados">0</span>
+                </div>
+            </div>
+        </div>
 
-                    <div style="text-align: center; margin-top: 25px;">
-                        <button type="submit" class="btn btn-success">
-                            ✅ Confirmar Recepción
-                        </button>
-                    </div>
-                </form>
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="main-content">
+            <!-- RESULTADOS DE BÚSQUEDA -->
+            <div id="resultados-busqueda" class="search-results">
+                <h3 style="color: white; margin-bottom: 10px;">Resultados de Búsqueda</h3>
+                <div id="contenido-resultados"></div>
+            </div>
+
+            <!-- ALMACÉN -->
+            <div class="warehouse" id="warehouse">
+                <!-- Los pallets se generarán por JavaScript -->
             </div>
         </div>
     </div>
 
-    <!-- Modal para ver/gestionar pallet -->
-    <div id="modal-pallet" class="modal">
+    <div class="status" id="status">Sistema iniciado</div>
+
+    <!-- MODAL -->
+    <div class="modal" id="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modal-pallet-title">📦 Gestión de Pallet</h3>
-                <button class="close-btn" onclick="inventorySystem.cerrarModalPallet()">&times;</button>
+                <h3 id="modal-title">Pallet</h3>
+                <button class="modal-close" onclick="cerrarModal()">Cerrar</button>
             </div>
             <div id="modal-body" style="padding: 20px;"></div>
         </div>
@@ -582,7 +520,7 @@
 
     <!-- Supabase SDK -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
+    
     <script>
         // CONFIGURACIÓN ENTERPRISE CON VALIDACIÓN
         const CONFIG = {
@@ -590,753 +528,1427 @@
             SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1ZXdvc2NvZ3pmaWt3dHpqanVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNDQ4NTUsImV4cCI6MjA3MTkyMDg1NX0.WwNqp_zYz2EUqOcvpbsoT42bihKSMM6pmxWe3nJiy1Y',
             MAX_RETRIES: 3,
             RETRY_DELAY: 1000,
-            POLLING_INTERVAL: 10000, // 10 segundos
+            HEARTBEAT_INTERVAL: 30000,
+            POLLING_INTERVAL: 10000, // 10 segundos para sincronización automática
             MAX_PALLETS: 100,
             PALLET_SIZE: 20,
             GRID_SPACING: 5
         };
 
-        // SISTEMA DE ESTADO ENTERPRISE CON SUPABASE Y POLLING
+        // SISTEMA DE ESTADO ENTERPRISE CON SUPABASE REAL
         class InventorySystem {
             constructor() {
                 this.inventario = {};
                 this.palletActual = null;
                 this.usuarioActual = 'Usuario1';
                 this.isOnline = false;
-                this.lastSync = null;
-                this.ultimaVerificacion = new Date().toISOString();
-                this.supabase = null;
+                this.retryCount = 0;
+                this.heartbeatInterval = null;
                 this.pollingInterval = null;
+                this.ultimaVerificacion = new Date().toISOString();
+                this.errorLog = [];
+                this.ultimoPalletId = 0;
+                this.supabase = null;
+                this.realtimeChannel = null;
+                
+                // Variables para arrastre robusto
+                this.dragState = {
+                    isDragging: false,
+                    draggedPallet: null,
+                    startPos: { x: 0, y: 0 },
+                    offset: { x: 0, y: 0 },
+                    wasMoved: false,
+                    startTime: 0
+                };
+                
+                this.init();
             }
 
-            // INICIALIZACIÓN PRINCIPAL
             async init() {
-                this.logInfo('Sistema inicializando...');
-                this.setupEventListeners();
-                await this.conectarSupabase();
-                await this.cargarInventarioDesdeDB();
-                this.renderPallets();
-                this.actualizarEstadisticas();
-                this.iniciarPolling();
-                this.actualizarStatusBar();
-                this.logInfo('Sistema inicializado completamente');
+                try {
+                    this.logInfo('Sistema inicializando...');
+                    await this.conectarSupabase();
+                    await this.cargarInventarioDesdeDB();
+                    this.inicializarArrastre();
+                    this.configurarSincronizacionTiempoReal();
+                    this.iniciarHeartbeat();
+                    this.actualizarContadores();
+                    this.logInfo('Sistema inicializado con sincronización real');
+                } catch (error) {
+                    this.logError('Error en inicialización', error);
+                    this.mostrarErrorUsuario('Error al inicializar el sistema');
+                }
             }
 
-            // CONEXIÓN A SUPABASE
+            // CONEXIÓN REAL A SUPABASE CON DIAGNÓSTICO
             async conectarSupabase() {
                 try {
                     this.logInfo('Intentando conectar a Supabase...');
+                    
+                    // Verificar que el SDK esté disponible
+                    if (!window.supabase) {
+                        throw new Error('Supabase SDK no está disponible');
+                    }
+                    
                     this.supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
                     
-                    // Verificar conectividad con simple query
-                    const { data, error } = await this.supabase
+                    // Prueba de conexión más simple
+                    const { data, error, count } = await this.supabase
                         .from('pallets')
-                        .select('count(*)', { count: 'exact', head: true });
-                    
+                        .select('*', { count: 'exact', head: true });
+
                     if (error) {
-                        throw error;
+                        this.logError('Error en consulta de prueba', error);
+                        throw new Error(`Error Supabase: ${error.message}`);
                     }
                     
                     this.isOnline = true;
-                    this.lastSync = new Date();
-                    this.logInfo(`Conectado a Supabase - ${data?.[0]?.count || 0} pallets en DB`);
-                    
+                    this.retryCount = 0;
+                    this.actualizarEstadoConexion('connected');
+                    this.logInfo(`Conectado a Supabase - ${count || 0} pallets en DB`);
+                    return true;
                 } catch (error) {
-                    this.logError('Error conectando a Supabase', error);
+                    this.logError('Error detallado de conexión', error);
                     this.isOnline = false;
-                }
-            }
-
-            // POLLING AUTOMÁTICO PARA SINCRONIZACIÓN
-            iniciarPolling() {
-                // Limpiar polling previo si existe
-                if (this.pollingInterval) {
-                    clearInterval(this.pollingInterval);
-                }
-                
-                this.logInfo('Iniciando polling automático cada 10 segundos...');
-                
-                this.pollingInterval = setInterval(async () => {
-                    try {
-                        if (!this.supabase || !this.isOnline) return;
-                        
-                        const timestampActual = new Date().toISOString();
-                        
-                        // Verificar cambios en materiales desde última verificación
-                        const { data: materialesRecientes, error } = await this.supabase
-                            .from('materiales')
-                            .select('*')
-                            .gte('fecha_recepcion', this.ultimaVerificacion)
-                            .eq('activo', true);
-                        
-                        if (!error && materialesRecientes && materialesRecientes.length > 0) {
-                            this.logInfo(`Polling detectó ${materialesRecientes.length} cambios`);
-                            await this.cargarInventarioDesdeDB();
-                            this.renderPallets();
-                            this.actualizarEstadisticas();
-                        }
-                        
-                        this.ultimaVerificacion = timestampActual;
-                        this.lastSync = new Date();
-                        this.actualizarStatusBar();
-                        
-                    } catch (error) {
-                        this.logError('Error en polling automático', error);
-                        this.isOnline = false;
-                        this.actualizarStatusBar();
+                    this.actualizarEstadoConexion('disconnected');
+                    
+                    // Mostrar error específico al usuario
+                    this.mostrarErrorUsuario(`Conexión fallida: ${error.message}`);
+                    
+                    // Retry automático
+                    if (this.retryCount < CONFIG.MAX_RETRIES) {
+                        this.retryCount++;
+                        this.logInfo(`Reintentando conexión en ${CONFIG.RETRY_DELAY * this.retryCount}ms (${this.retryCount}/${CONFIG.MAX_RETRIES})`);
+                        setTimeout(() => this.conectarSupabase(), CONFIG.RETRY_DELAY * this.retryCount);
+                    } else {
+                        this.logError('Máximo de reintentos alcanzado - funcionando en modo local');
+                        this.inicializarModoLocal();
                     }
-                }, CONFIG.POLLING_INTERVAL);
+                    return false;
+                }
             }
 
-            // SINCRONIZACIÓN MANUAL
-            async sincronizarManual() {
-                this.logInfo('Sincronización manual iniciada...');
-                this.actualizarStatusBar('syncing');
-                
-                try {
-                    await this.cargarInventarioDesdeDB();
-                    this.renderPallets();
-                    this.actualizarEstadisticas();
-                    this.lastSync = new Date();
-                    this.logInfo('Sincronización manual completada');
-                } catch (error) {
-                    this.logError('Error en sincronización manual', error);
-                }
-                
-                this.actualizarStatusBar();
+            // MODO LOCAL SI SUPABASE FALLA
+            inicializarModoLocal() {
+                this.logInfo('Iniciando modo local sin Supabase');
+                this.inventario = {};
+                this.ultimoPalletId = 0;
+                this.actualizarContadores();
+                this.mostrarErrorUsuario('Funcionando en modo local - los datos no se sincronizarán');
             }
 
             // CARGAR INVENTARIO DESDE BASE DE DATOS
             async cargarInventarioDesdeDB() {
-                if (!this.isOnline || !this.supabase) return;
-                
                 try {
-                    // Cargar pallets
-                    const { data: pallets, error: palletsError } = await this.supabase
-                        .from('pallets')
-                        .select('*')
-                        .eq('activo', true)
-                        .order('numero');
-                    
-                    if (palletsError) throw palletsError;
-                    
-                    // Cargar materiales activos
-                    const { data: materiales, error: materialesError } = await this.supabase
+                    if (!this.supabase || !this.isOnline) return;
+
+                    const { data: materiales, error } = await this.supabase
                         .from('materiales')
-                        .select('*')
+                        .select(`
+                            *,
+                            pallets!inner (numero, posicion_x, posicion_y)
+                        `)
                         .eq('activo', true)
                         .order('fecha_recepcion', { ascending: false });
-                    
-                    if (materialesError) throw materialesError;
-                    
-                    // Reconstruir inventario
+
+                    if (error) throw error;
+
+                    // Resetear inventario local
                     this.inventario = {};
-                    
-                    // Inicializar pallets
-                    pallets?.forEach(pallet => {
-                        this.inventario[pallet.numero] = {
-                            materiales: [],
-                            posicion: { x: pallet.posicion_x, y: pallet.posicion_y }
-                        };
-                    });
-                    
-                    // Agregar materiales a pallets
-                    materiales?.forEach(material => {
-                        if (this.inventario[material.pallet_id]) {
-                            this.inventario[material.pallet_id].materiales.push({
+                    this.ultimoPalletId = 0;
+
+                    // Cargar materiales desde la base de datos
+                    if (materiales && materiales.length > 0) {
+                        const palletsMap = new Map();
+                        
+                        materiales.forEach(material => {
+                            const palletNum = material.pallets.numero;
+                            
+                            if (!palletsMap.has(palletNum)) {
+                                palletsMap.set(palletNum, {
+                                    materiales: [],
+                                    total: 0,
+                                    created: material.pallets.created_at || new Date().toISOString(),
+                                    lastUpdated: new Date().toISOString(),
+                                    visible: false,
+                                    posicion: {
+                                        x: material.pallets.posicion_x || 50,
+                                        y: material.pallets.posicion_y || 50
+                                    }
+                                });
+                            }
+
+                            palletsMap.get(palletNum).materiales.push({
                                 id: material.id,
                                 tipo: material.tipo,
                                 circunferencia: material.circunferencia,
                                 espesor: material.espesor,
+                                descripcion: material.descripcion_completa,
                                 cantidad: material.cantidad,
                                 unidad: material.unidad,
                                 proveedor: material.proveedor,
-                                descripcion: material.descripcion_completa,
-                                fecha: material.fecha_recepcion
+                                fecha: material.fecha_recepcion,
+                                usuario: material.usuario_registro
                             });
-                        }
-                    });
-                    
-                    this.logInfo(`Inventario cargado: ${pallets?.length || 0} pallets, ${materiales?.length || 0} materiales`);
-                    
+
+                            if (palletNum > this.ultimoPalletId) {
+                                this.ultimoPalletId = palletNum;
+                            }
+                        });
+
+                        // Convertir Map a objeto inventario
+                        palletsMap.forEach((data, palletNum) => {
+                            data.total = data.materiales.reduce((sum, m) => sum + m.cantidad, 0);
+                            this.inventario[palletNum] = data;
+                        });
+                    }
+
+                    await this.crearPalletsVisuales();
+                    this.logInfo(`Inventario cargado: ${materiales?.length || 0} materiales en ${Object.keys(this.inventario).length} pallets`);
+
                 } catch (error) {
                     this.logError('Error cargando inventario desde DB', error);
+                    throw error;
                 }
             }
 
-            // CREAR NUEVO PALLET
-            async crearNuevoPallet() {
-                if (!this.isOnline) {
-                    alert('Error: No hay conexión con la base de datos. Verifica tu conexión.');
-                    return;
+            // CREAR PALLETS VISUALES BASADOS EN DATOS DE DB
+            async crearPalletsVisuales() {
+                try {
+                    const warehouse = document.getElementById('warehouse');
+                    if (!warehouse) return;
+
+                    warehouse.innerHTML = '';
+
+                    Object.keys(this.inventario).forEach(palletId => {
+                        const datos = this.inventario[palletId];
+                        const pallet = document.createElement('div');
+                        
+                        pallet.className = datos.total > 0 ? 'pallet occupied' : 'pallet empty';
+                        pallet.dataset.pallet = palletId;
+                        pallet.title = `Pallet P${palletId} - Click para gestionar`;
+                        pallet.textContent = palletId;
+                        
+                        // Aplicar posición desde base de datos
+                        pallet.style.left = datos.posicion.x + 'px';
+                        pallet.style.top = datos.posicion.y + 'px';
+                        
+                        // Mostrar solo pallets con inventario
+                        if (datos.total > 0) {
+                            pallet.style.display = 'flex';
+                            datos.visible = true;
+                        } else {
+                            pallet.style.display = 'none';
+                            datos.visible = false;
+                        }
+                        
+                        this.aplicarEstilosPallet(pallet);
+                        warehouse.appendChild(pallet);
+                    });
+
+                    this.logInfo('Pallets visuales creados desde base de datos');
+                } catch (error) {
+                    this.logError('Error creando pallets visuales', error);
+                }
+            }
+
+            // NUEVA SINCRONIZACIÓN CON POLLING DE 10 SEGUNDOS
+            configurarSincronizacionTiempoReal() {
+                try {
+                    if (!this.supabase || !this.isOnline) return;
+
+                    // Limpiar polling previo si existe
+                    if (this.pollingInterval) {
+                        clearInterval(this.pollingInterval);
+                    }
+                    
+                    this.logInfo('Iniciando polling automático cada 10 segundos...');
+                    
+                    // Polling automático cada 10 segundos
+                    this.pollingInterval = setInterval(async () => {
+                        try {
+                            if (!this.supabase || !this.isOnline) return;
+                            
+                            const timestampActual = new Date().toISOString();
+                            
+                            // Verificar cambios en materiales desde última verificación
+                            const { data: materialesRecientes, error } = await this.supabase
+                                .from('materiales')
+                                .select('*')
+                                .gte('fecha_recepcion', this.ultimaVerificacion)
+                                .eq('activo', true);
+                            
+                            if (!error && materialesRecientes && materialesRecientes.length > 0) {
+                                this.logInfo(`Polling detectó ${materialesRecientes.length} cambios`);
+                                await this.cargarInventarioDesdeDB();
+                                this.actualizarContadores();
+                            }
+                            
+                            this.ultimaVerificacion = timestampActual;
+                            
+                        } catch (error) {
+                            this.logError('Error en polling automático', error);
+                            this.isOnline = false;
+                            this.actualizarEstadoConexion('disconnected');
+                        }
+                    }, CONFIG.POLLING_INTERVAL);
+
+                    this.logInfo('Polling automático configurado exitosamente');
+                } catch (error) {
+                    this.logError('Error configurando polling', error);
+                }
+            }
+
+            async manejarCambioTiempoReal(payload) {
+                try {
+                    // Recargar inventario completo desde DB
+                    await this.cargarInventarioDesdeDB();
+                    this.actualizarContadores();
+                    
+                    const evento = payload.eventType;
+                    const data = payload.new || payload.old;
+                    
+                    this.mostrarNotificacionCambio(evento, data);
+                } catch (error) {
+                    this.logError('Error manejando cambio tiempo real', error);
+                }
+            }
+
+            async manejarCambioPallet(payload) {
+                try {
+                    // Actualizar posición de pallet si cambió
+                    const palletData = payload.new || payload.old;
+                    if (palletData && payload.eventType === 'UPDATE') {
+                        const palletElement = document.querySelector(`[data-pallet="${palletData.numero}"]`);
+                        if (palletElement && this.inventario[palletData.numero]) {
+                            palletElement.style.left = palletData.posicion_x + 'px';
+                            palletElement.style.top = palletData.posicion_y + 'px';
+                            this.inventario[palletData.numero].posicion = {
+                                x: palletData.posicion_x,
+                                y: palletData.posicion_y
+                            };
+                        }
+                    }
+                } catch (error) {
+                    this.logError('Error manejando cambio de pallet', error);
+                }
+            }
+
+            mostrarNotificacionCambio(evento, data) {
+                const container = document.getElementById('actividad-reciente');
+                if (!container) return;
+
+                const timestamp = new Date().toLocaleTimeString();
+                const activityItem = document.createElement('div');
+                activityItem.className = 'activity-item';
+                activityItem.style.borderLeftColor = '#f59e0b'; // Color naranja para cambios externos
+                
+                activityItem.innerHTML = `
+                    <strong>${timestamp}</strong> - ${evento.toUpperCase()}<br>
+                    <small>Sincronizado: ${data?.descripcion_completa || data?.tipo || 'Cambio externo'}</small>
+                `;
+                
+                container.insertBefore(activityItem, container.firstChild);
+                
+                // Mantener solo los últimos 10 items
+                while (container.children.length > 10) {
+                    container.removeChild(container.lastChild);
+                }
+            }
+
+            // LOGGING ENTERPRISE CON TIMESTAMP
+            logInfo(mensaje, data = null) {
+                const timestamp = new Date().toISOString();
+                const logEntry = { timestamp, level: 'INFO', mensaje, data };
+                console.log(`[${timestamp}] INFO: ${mensaje}`, data || '');
+                this.actualizarStatus(`INFO: ${mensaje}`);
+            }
+
+            logError(mensaje, error = null) {
+                const timestamp = new Date().toISOString();
+                const logEntry = { 
+                    timestamp, 
+                    level: 'ERROR', 
+                    mensaje, 
+                    error: error?.message || error,
+                    stack: error?.stack 
+                };
+                this.errorLog.push(logEntry);
+                console.error(`[${timestamp}] ERROR: ${mensaje}`, error);
+                this.actualizarStatus(`ERROR: ${mensaje}`, 'error');
+                
+                // Mantener solo los últimos 50 errores
+                if (this.errorLog.length > 50) {
+                    this.errorLog = this.errorLog.slice(-50);
+                }
+            }
+
+            logWarning(mensaje, data = null) {
+                const timestamp = new Date().toISOString();
+                console.warn(`[${timestamp}] WARNING: ${mensaje}`, data || '');
+                this.actualizarStatus(`WARNING: ${mensaje}`, 'warning');
+            }
+
+            // VALIDACIÓN DE DATOS ROBUSTA
+            validarPalletId(palletId) {
+                const id = parseInt(palletId);
+                if (isNaN(id) || id < 1 || id > CONFIG.MAX_PALLETS) {
+                    throw new Error(`ID de pallet inválido: ${palletId}`);
+                }
+                return id;
+            }
+
+            validarUsuario(usuario) {
+                if (!usuario || typeof usuario !== 'string' || usuario.trim().length === 0) {
+                    throw new Error('Usuario inválido');
+                }
+                return usuario.trim();
+            }
+
+            // GESTIÓN DE ESTADO CON RECUPERACIÓN DE ERRORES
+            actualizarStatus(mensaje, tipo = 'info') {
+                try {
+                    const statusEl = document.getElementById('status');
+                    if (!statusEl) return;
+                    
+                    const timestamp = new Date().toLocaleTimeString();
+                    const colorClass = {
+                        'info': 'color: lime',
+                        'warning': 'color: orange', 
+                        'error': 'color: red'
+                    }[tipo] || 'color: lime';
+                    
+                    const logLine = `<div style="${colorClass}">[${timestamp}] ${mensaje}</div>`;
+                    statusEl.innerHTML = logLine + statusEl.innerHTML.split('<div>').slice(0, 10).join('<div>');
+                } catch (error) {
+                    console.error('Error actualizando status:', error);
+                }
+            }
+
+            actualizarEstadoConexion(estado) {
+                const statusEl = document.getElementById('connection-status');
+                if (!statusEl) return;
+                
+                statusEl.className = `connection-status ${estado}`;
+                
+                const estados = {
+                    'connected': { texto: 'Conectado', online: true },
+                    'connecting': { texto: 'Conectando...', online: false },
+                    'disconnected': { texto: 'Sin conexión', online: false }
+                };
+                
+                const estadoInfo = estados[estado] || estados.disconnected;
+                statusEl.textContent = estadoInfo.texto;
+                this.isOnline = estadoInfo.online;
+            }
+
+            // HEARTBEAT PARA MONITOREO DE SALUD DEL SISTEMA
+            iniciarHeartbeat() {
+                this.heartbeatInterval = setInterval(() => {
+                    try {
+                        this.verificarSaludSistema();
+                    } catch (error) {
+                        this.logError('Error en heartbeat', error);
+                    }
+                }, CONFIG.HEARTBEAT_INTERVAL);
+            }
+
+            verificarSaludSistema() {
+                const metrics = {
+                    palletsCreados: Object.keys(this.inventario).length,
+                    erroresRecientes: this.errorLog.filter(e => 
+                        Date.now() - new Date(e.timestamp).getTime() < 300000 // 5 minutos
+                    ).length,
+                    memoriaUsada: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) : 'N/A',
+                    tiempoActivo: Math.round((Date.now() - this.startTime) / 1000)
+                };
+                
+                if (metrics.erroresRecientes > 10) {
+                    this.logWarning('Muchos errores recientes detectados', metrics);
                 }
                 
+                // Log de métricas cada 5 minutos
+                if (metrics.tiempoActivo % 300 === 0) {
+                    this.logInfo('Métricas del sistema', metrics);
+                }
+            }
+
+            // APLICAR ESTILOS FORZADOS A PALLETS
+            aplicarEstilosPallet(pallet) {
+                // Aplicar estilos CSS forzados que se definieron en el initialization
+                pallet.style.width = '20px';
+                pallet.style.height = '20px';
+                pallet.style.minWidth = '20px';
+                pallet.style.minHeight = '20px';
+                pallet.style.maxWidth = '20px';
+                pallet.style.maxHeight = '20px';
+                pallet.style.boxSizing = 'border-box';
+                pallet.style.fontSize = '8px';
+                pallet.style.color = 'white';
+                pallet.style.fontWeight = 'bold';
+                pallet.style.display = 'flex';
+                pallet.style.alignItems = 'center';
+                pallet.style.justifyContent = 'center';
+                pallet.style.textShadow = '1px 1px 1px rgba(0,0,0,0.8)';
+                pallet.style.position = 'absolute';
+                pallet.style.cursor = 'move';
+                pallet.style.border = '1px solid #fff';
+                pallet.style.borderRadius = '2px';
+                pallet.style.userSelect = 'none';
+            }
+
+            // GESTIÓN DE VISIBILIDAD DE PALLETS
+            actualizarVisibilidadPallet(palletId) {
                 try {
-                    // Encontrar próximo número disponible
-                    const numerosExistentes = Object.keys(this.inventario).map(Number);
-                    const proximoNumero = Math.max(0, ...numerosExistentes) + 1;
+                    const id = this.validarPalletId(palletId);
+                    const datos = this.inventario[id];
+                    const palletElement = document.querySelector(`[data-pallet="${id}"]`);
                     
-                    // Posición predeterminada
-                    const nuevaPosicion = this.calcularNuevaPosicion();
+                    if (!palletElement) return;
                     
-                    // Crear en Supabase
-                    const { data, error } = await this.supabase
-                        .from('pallets')
-                        .insert({
-                            numero: proximoNumero,
-                            posicion_x: nuevaPosicion.x,
-                            posicion_y: nuevaPosicion.y,
-                            activo: true
-                        })
-                        .select();
+                    const tieneInventario = datos.total > 0;
                     
-                    if (error) throw error;
+                    if (tieneInventario && !datos.visible) {
+                        // Mostrar pallet que ahora tiene inventario
+                        palletElement.style.display = 'flex';
+                        palletElement.classList.remove('empty');
+                        palletElement.classList.add('occupied');
+                        datos.visible = true;
+                        this.logInfo(`Pallet P${id} ahora visible (tiene inventario)`);
+                    } else if (!tieneInventario && datos.visible) {
+                        // Ocultar pallet que quedó vacío
+                        palletElement.style.display = 'none';
+                        palletElement.classList.remove('occupied');
+                        palletElement.classList.add('empty');
+                        datos.visible = false;
+                        this.logInfo(`Pallet P${id} ahora oculto (sin inventario)`);
+                    }
                     
-                    // Agregar al inventario local
-                    this.inventario[proximoNumero] = {
-                        materiales: [],
-                        posicion: nuevaPosicion
+                    this.actualizarContadores();
+                } catch (error) {
+                    this.logError('Error actualizando visibilidad', error);
+                }
+            }
+
+            // ACTUALIZAR CONTADORES EN LA INTERFAZ
+            actualizarContadores() {
+                try {
+                    const totalPallets = Object.keys(this.inventario).length;
+                    const palletsOcupados = Object.values(this.inventario).filter(p => p.total > 0).length;
+                    
+                    const contadorTotal = document.getElementById('contador-pallets');
+                    const contadorOcupados = document.getElementById('contador-ocupados');
+                    
+                    if (contadorTotal) contadorTotal.textContent = totalPallets;
+                    if (contadorOcupados) contadorOcupados.textContent = palletsOcupados;
+                } catch (error) {
+                    this.logError('Error actualizando contadores', error);
+                }
+            }
+
+            // SISTEMA DE ARRASTRE ENTERPRISE CON RECUPERACIÓN DE ERRORES
+            inicializarArrastre() {
+                try {
+                    const warehouse = document.getElementById('warehouse');
+                    if (!warehouse) {
+                        throw new Error('Warehouse no encontrado para inicializar arrastre');
+                    }
+                    
+                    // Remover event listeners anteriores para evitar duplicados
+                    warehouse.removeEventListener('mousedown', this.handleWarehouseMouseDown);
+                    document.removeEventListener('mousemove', this.handleDocumentMouseMove);
+                    document.removeEventListener('mouseup', this.handleDocumentMouseUp);
+                    document.removeEventListener('touchmove', this.handleDocumentTouchMove);
+                    document.removeEventListener('touchend', this.handleDocumentTouchEnd);
+                    
+                    // Crear referencias a las funciones para poder removerlas después
+                    this.handleWarehouseMouseDown = (e) => this.handleMouseDown(e);
+                    this.handleDocumentMouseMove = (e) => this.handleMouseMove(e);
+                    this.handleDocumentMouseUp = (e) => this.handleMouseUp(e);
+                    this.handleWarehouseTouchStart = (e) => this.handleTouchStart(e);
+                    this.handleDocumentTouchMove = (e) => this.handleTouchMove(e);
+                    this.handleDocumentTouchEnd = (e) => this.handleTouchEnd(e);
+                    
+                    // Event listeners con manejo de errores
+                    warehouse.addEventListener('mousedown', this.handleWarehouseMouseDown, { passive: false });
+                    document.addEventListener('mousemove', this.handleDocumentMouseMove, { passive: false });
+                    document.addEventListener('mouseup', this.handleDocumentMouseUp);
+                    
+                    // Touch events para móviles
+                    warehouse.addEventListener('touchstart', this.handleWarehouseTouchStart, { passive: false });
+                    document.addEventListener('touchmove', this.handleDocumentTouchMove, { passive: false });
+                    document.addEventListener('touchend', this.handleDocumentTouchEnd);
+                    
+                    // Prevenir comportamientos por defecto
+                    warehouse.addEventListener('dragstart', (e) => e.preventDefault());
+                    warehouse.addEventListener('selectstart', (e) => {
+                        if (this.dragState.isDragging) e.preventDefault();
+                    });
+                    
+                    this.logInfo('Sistema de arrastre inicializado');
+                } catch (error) {
+                    this.logError('Error inicializando arrastre', error);
+                    throw error;
+                }
+            }
+
+            handleMouseDown(e) {
+                try {
+                    const pallet = e.target.closest('.pallet');
+                    if (!pallet) return;
+                    
+                    this.iniciarArrastre(e, pallet);
+                } catch (error) {
+                    this.logError('Error en mousedown', error);
+                    this.resetearArrastre();
+                }
+            }
+
+            handleTouchStart(e) {
+                try {
+                    const pallet = e.target.closest('.pallet');
+                    if (!pallet) return;
+                    
+                    const touch = e.touches[0];
+                    this.iniciarArrastre(touch, pallet);
+                } catch (error) {
+                    this.logError('Error en touchstart', error);
+                    this.resetearArrastre();
+                }
+            }
+
+            iniciarArrastre(evento, pallet) {
+                try {
+                    const palletId = this.validarPalletId(pallet.dataset.pallet);
+                    
+                    evento.preventDefault();
+                    
+                    this.dragState = {
+                        isDragging: true,
+                        draggedPallet: pallet,
+                        startPos: { x: evento.clientX, y: evento.clientY },
+                        offset: { 
+                            x: evento.clientX - pallet.getBoundingClientRect().left,
+                            y: evento.clientY - pallet.getBoundingClientRect().top
+                        },
+                        wasMoved: false,
+                        startTime: Date.now()
                     };
                     
-                    this.renderPallets();
-                    this.actualizarEstadisticas();
-                    this.logInfo(`Pallet ${proximoNumero} creado exitosamente`);
+                    pallet.classList.add('dragging');
+                    document.body.style.cursor = 'grabbing';
+                    document.body.style.userSelect = 'none';
                     
                 } catch (error) {
-                    this.logError('Error creando pallet en DB', error);
-                    alert('Error creando pallet. Revisa la consola para más detalles.');
+                    this.logError('Error iniciando arrastre', error);
+                    this.resetearArrastre();
                 }
             }
 
-            // CALCULAR POSICIÓN PARA NUEVO PALLET
-            calcularNuevaPosicion() {
-                const pallets = Object.keys(this.inventario);
-                const row = Math.floor(pallets.length / 5);
-                const col = pallets.length % 5;
-                return {
-                    x: 50 + col * 120,
-                    y: 100 + row * 120
-                };
+            handleMouseMove(e) {
+                this.manejarMovimiento(e);
             }
 
-            // ABRIR MODAL DE RECEPCIÓN
-            async abrirModalRecepcion() {
-                await this.cargarPalletsEnSelect();
-                document.getElementById('modal-recepcion').classList.add('show');
+            handleTouchMove(e) {
+                if (e.touches.length > 0) {
+                    this.manejarMovimiento(e.touches[0]);
+                }
             }
 
-            // CARGAR PALLETS EN SELECT
-            async cargarPalletsEnSelect() {
-                const select = document.getElementById('pallet-select');
-                select.innerHTML = '<option value="">Seleccionar pallet...</option>';
-                
-                Object.keys(this.inventario)
-                    .sort((a, b) => Number(a) - Number(b))
-                    .forEach(num => {
-                        const cantidadMateriales = this.inventario[num].materiales.length;
-                        const option = document.createElement('option');
-                        option.value = num;
-                        option.textContent = `Pallet ${num} (${cantidadMateriales} materiales)`;
-                        select.appendChild(option);
-                    });
+            manejarMovimiento(evento) {
+                try {
+                    if (!this.dragState.isDragging || !this.dragState.draggedPallet) return;
+                    
+                    evento.preventDefault();
+                    
+                    const deltaX = Math.abs(evento.clientX - this.dragState.startPos.x);
+                    const deltaY = Math.abs(evento.clientY - this.dragState.startPos.y);
+                    
+                    // Umbral de movimiento
+                    if (deltaX > 3 || deltaY > 3) {
+                        this.dragState.wasMoved = true;
+                    }
+                    
+                    const warehouse = document.getElementById('warehouse');
+                    const warehouseRect = warehouse.getBoundingClientRect();
+                    
+                    let newX = evento.clientX - warehouseRect.left - this.dragState.offset.x;
+                    let newY = evento.clientY - warehouseRect.top - this.dragState.offset.y;
+                    
+                    // Límites estrictos - considerar padding del contenedor y tamaño del pallet
+                    const padding = 10; // Padding interno del warehouse
+                    const palletSize = CONFIG.PALLET_SIZE;
+                    
+                    const minX = padding;
+                    const minY = padding;
+                    const maxX = warehouseRect.width - palletSize - padding;
+                    const maxY = warehouseRect.height - palletSize - padding;
+                    
+                    // Aplicar límites estrictos
+                    newX = Math.max(minX, Math.min(newX, maxX));
+                    newY = Math.max(minY, Math.min(newY, maxY));
+                    
+                    // Verificar que las coordenadas estén dentro del rango válido
+                    if (newX >= minX && newX <= maxX && newY >= minY && newY <= maxY) {
+                        // Aplicar posición con requestAnimationFrame para fluidez
+                        requestAnimationFrame(() => {
+                            if (this.dragState.draggedPallet) {
+                                this.dragState.draggedPallet.style.left = newX + 'px';
+                                this.dragState.draggedPallet.style.top = newY + 'px';
+                            }
+                        });
+                    }
+                    
+                } catch (error) {
+                    this.logError('Error en movimiento', error);
+                    this.resetearArrastre();
+                }
             }
 
-            // PROCESAR RECEPCIÓN DE MATERIAL
+            handleMouseUp(e) {
+                this.finalizarArrastre();
+            }
+
+            handleTouchEnd(e) {
+                this.finalizarArrastre();
+            }
+
+            finalizarArrastre() {
+                try {
+                    if (!this.dragState.isDragging || !this.dragState.draggedPallet) return;
+                    
+                    const pallet = this.dragState.draggedPallet;
+                    const palletId = this.validarPalletId(pallet.dataset.pallet);
+                    const dragDuration = Date.now() - this.dragState.startTime;
+                    
+                    // Restaurar estilos
+                    pallet.classList.remove('dragging');
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto';
+                    
+                    // Determinar acción basada en movimiento y duración
+                    if (!this.dragState.wasMoved && dragDuration < 300) {
+                        // Click rápido sin movimiento = abrir modal
+                        setTimeout(() => this.abrirModal(palletId), 50);
+                        this.logInfo(`Click en pallet P${palletId}`);
+                    } else if (this.dragState.wasMoved) {
+                        // Movimiento = reposicionar pallet y guardar en DB
+                        const x = parseInt(pallet.style.left);
+                        const y = parseInt(pallet.style.top);
+                        
+                        this.logInfo(`Pallet P${palletId} reposicionado a (${x}, ${y})`);
+                        
+                        // Guardar nueva posición en Supabase
+                        this.actualizarPosicionPallet(palletId, x, y);
+                    }
+                    
+                } catch (error) {
+                    this.logError('Error finalizando arrastre', error);
+                } finally {
+                    this.resetearArrastre();
+                }
+            }
+
+            resetearArrastre() {
+                try {
+                    if (this.dragState.draggedPallet) {
+                        this.dragState.draggedPallet.classList.remove('dragging');
+                    }
+                    
+                    this.dragState = {
+                        isDragging: false,
+                        draggedPallet: null,
+                        startPos: { x: 0, y: 0 },
+                        offset: { x: 0, y: 0 },
+                        wasMoved: false,
+                        startTime: 0
+                    };
+                    
+                    document.body.style.cursor = 'default';
+                    document.body.style.userSelect = 'auto';
+                } catch (error) {
+                    this.logError('Error reseteando arrastre', error);
+                }
+            }
+
+            // MODAL CON FORMULARIO DETALLADO ORIGINAL
+            abrirModal(palletId) {
+                try {
+                    const id = this.validarPalletId(palletId);
+                    this.palletActual = id;
+                    
+                    const modalTitle = document.getElementById('modal-title');
+                    const modalBody = document.getElementById('modal-body');
+                    const modal = document.getElementById('modal');
+                    
+                    if (!modalTitle || !modalBody || !modal) {
+                        throw new Error('Elementos del modal no encontrados');
+                    }
+                    
+                    modalTitle.textContent = `Pallet P${id}`;
+                    
+                    const datos = this.inventario[id];
+                    if (!datos) {
+                        throw new Error(`Datos del pallet P${id} no encontrados`);
+                    }
+                    
+                    if (datos.materiales.length === 0) {
+                        // PALLET VACÍO - FORMULARIO COMPLETO
+                        modalBody.innerHTML = `
+                            <h3 style="text-align: center; margin-bottom: 20px;">Pallet Vacío</h3>
+                            
+                            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                                <h4 style="margin-bottom: 15px; color: #2d3748;">Recibir Material</h4>
+                                
+                                <form id="form-recepcion-material" onsubmit="inventorySystem.recibirMaterialFormulario(event)">
+                                    <div class="form-group">
+                                        <label>Tipo de Material:</label>
+                                        <select id="tipo-material" required>
+                                            <option value="">Seleccionar...</option>
+                                            <option value="Lamina">Lámina</option>
+                                            <option value="Strap">Strap</option>
+                                            <option value="Codo 90">Codo 90°</option>
+                                            <option value="Codo 45">Codo 45°</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                        <div class="form-group">
+                                            <label>Circunferencia (pulgadas):</label>
+                                            <input type="text" id="circunferencia" placeholder="12" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Espesor (pulgadas):</label>
+                                            <input type="text" id="espesor" placeholder="1.5" required>
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                        <div class="form-group">
+                                            <label>Cantidad:</label>
+                                            <input type="number" id="cantidad" placeholder="100" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Unidad:</label>
+                                            <select id="unidad" required>
+                                                <option value="pies lineales">Pies lineales</option>
+                                                <option value="piezas">Piezas</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Proveedor:</label>
+                                        <input type="text" id="proveedor" placeholder="Nombre del proveedor" required>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn-primary">
+                                        Confirmar Recepción
+                                    </button>
+                                </form>
+                            </div>
+                        `;
+                    } else {
+                        // PALLET CON MATERIALES
+                        modalBody.innerHTML = `
+                            <h3>Inventario (${datos.total} unidades totales)</h3>
+                            
+                            <div style="max-height: 200px; overflow-y: auto; margin: 15px 0;">
+                                ${datos.materiales.map((item, index) => `
+                                    <div style="background: #f1f5f9; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #38a169; display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <strong>${item.descripcion || item.tipo}</strong><br>
+                                            <small style="color: #666;">
+                                                ${item.cantidad} ${item.unidad || 'unidades'} | 
+                                                Proveedor: ${item.proveedor || 'N/A'}
+                                            </small><br>
+                                            <small style="color: #999;">Recibido: ${new Date(item.fecha).toLocaleString()}</small>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            <div style="text-align: center; margin-top: 15px;">
+                                <button class="btn-danger" onclick="inventorySystem.simularDespacho(${id})" style="width: auto; padding: 10px 20px;">
+                                    Despachar Todo el Pallet
+                                </button>
+                                <button class="btn-primary" onclick="inventorySystem.cerrarModal()" style="width: auto; padding: 10px 20px; margin-left: 10px;">
+                                    Cerrar
+                                </button>
+                            </div>
+                        `;
+                    }
+                    
+                    modal.classList.add('active');
+                    this.logInfo(`Modal P${id} abierto`);
+                    
+                } catch (error) {
+                    this.logError('Error abriendo modal', error);
+                    this.mostrarErrorUsuario('No se pudo abrir el modal del pallet');
+                }
+            }
+
+            // FUNCIÓN PARA RECIBIR MATERIAL CON SUPABASE
             async recibirMaterialFormulario(event) {
                 event.preventDefault();
                 
                 try {
-                    // Recopilar datos del formulario
-                    const formData = this.recopilarDatosFormulario();
-                    if (!formData) return;
+                    if (!this.supabase || !this.isOnline) {
+                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
+                        return;
+                    }
+
+                    const tipo = document.getElementById('tipo-material')?.value;
+                    const circunf = document.getElementById('circunferencia')?.value;
+                    const espesor = document.getElementById('espesor')?.value;
+                    const cantidad = parseInt(document.getElementById('cantidad')?.value);
+                    const unidad = document.getElementById('unidad')?.value;
+                    const proveedor = document.getElementById('proveedor')?.value || 'Sin especificar';
                     
-                    // Crear descripción completa
-                    const descripcionCompleta = this.generarDescripcionMaterial(formData);
-                    
-                    // Guardar en Supabase
-                    const materialData = {
-                        pallet_id: parseInt(formData.palletId),
-                        tipo: formData.tipo,
-                        circunferencia: formData.circunferencia,
-                        espesor: formData.espesor,
-                        cantidad: parseInt(formData.cantidad),
-                        unidad: formData.unidad,
-                        proveedor: formData.proveedor,
-                        descripcion_completa: descripcionCompleta,
-                        usuario_registro: this.usuarioActual,
-                        activo: true
-                    };
-                    
-                    const { data, error } = await this.supabase
-                        .from('materiales')
-                        .insert(materialData)
-                        .select();
-                    
-                    if (error) throw error;
-                    
-                    // Agregar al inventario local
-                    if (!this.inventario[formData.palletId]) {
-                        this.inventario[formData.palletId] = { materiales: [], posicion: { x: 0, y: 0 } };
+                    if (!tipo) {
+                        this.mostrarErrorUsuario('Seleccione el tipo de material');
+                        return;
                     }
                     
-                    this.inventario[formData.palletId].materiales.push({
-                        id: data[0].id,
-                        tipo: formData.tipo,
-                        circunferencia: formData.circunferencia,
-                        espesor: formData.espesor,
-                        cantidad: parseInt(formData.cantidad),
-                        unidad: formData.unidad,
-                        proveedor: formData.proveedor,
-                        descripcion: descripcionCompleta,
-                        fecha: new Date().toISOString()
-                    });
+                    if (!cantidad || cantidad <= 0) {
+                        this.mostrarErrorUsuario('Ingrese una cantidad válida');
+                        return;
+                    }
                     
-                    // Registrar movimiento
-                    await this.registrarMovimiento('entrada', data[0].id, parseInt(formData.cantidad), formData.proveedor);
+                    // Construir descripción completa
+                    let descripcion = tipo;
+                    if (circunf && espesor) {
+                        descripcion += ` - ${circunf}" x ${espesor}"`;
+                    } else if (circunf) {
+                        descripcion += ` - ${circunf}"`;
+                    } else if (espesor) {
+                        descripcion += ` - ${espesor}"`;
+                    }
                     
-                    // Actualizar UI
-                    this.renderPallets();
-                    this.actualizarEstadisticas();
-                    this.cerrarModal();
-                    this.limpiarFormularioRecepcion();
-                    
-                    this.logInfo(`Material guardado en DB: P${formData.palletId} - ${formData.cantidad} ${formData.unidad} de ${descripcionCompleta}`);
-                    alert(`✅ Material recibido exitosamente en Pallet ${formData.palletId}`);
-                    
-                } catch (error) {
-                    this.logError('Error procesando recepción de material', error);
-                    alert('❌ Error al procesar la recepción. Revisa la consola para más detalles.');
-                }
-            }
+                    const id = this.palletActual;
 
-            // RECOPILAR DATOS DEL FORMULARIO
-            recopilarDatosFormulario() {
-                const palletId = document.getElementById('pallet-select').value;
-                const tipo = document.getElementById('material-tipo').value;
-                const circunferencia = document.getElementById('material-circunferencia').value;
-                const espesor = document.getElementById('material-espesor').value;
-                const cantidad = document.getElementById('material-cantidad').value;
-                const unidad = document.getElementById('material-unidad').value;
-                const proveedor = document.getElementById('material-proveedor').value;
-                
-                // Validación
-                if (!palletId || !tipo || !circunferencia || !espesor || !cantidad || !unidad || !proveedor) {
-                    alert('⚠️ Por favor, completa todos los campos obligatorios');
-                    return null;
-                }
-                
-                return { palletId, tipo, circunferencia, espesor, cantidad, unidad, proveedor };
-            }
+                    // 1. Obtener o crear pallet en DB
+                    let { data: palletData, error: palletError } = await this.supabase
+                        .from('pallets')
+                        .select('id')
+                        .eq('numero', id)
+                        .single();
 
-            // GENERAR DESCRIPCIÓN DE MATERIAL
-            generarDescripcionMaterial(formData) {
-                const { tipo, circunferencia, espesor, cantidad, unidad } = formData;
-                
-                let descripcion = `${cantidad} ${unidad} de ${tipo}`;
-                
-                if (tipo === 'Lamina') {
-                    descripcion += ` - ${circunferencia}" x ${espesor}"`;
-                } else if (tipo === 'Strap') {
-                    descripcion += ` - ${circunferencia}" x ${espesor}"`;
-                } else if (tipo.includes('Codo')) {
-                    descripcion += ` - ${circunferencia}" x ${espesor}"`;
-                }
-                
-                return descripcion;
-            }
+                    if (palletError && palletError.code === 'PGRST116') {
+                        // Pallet no existe, crearlo
+                        const palletInfo = this.inventario[id];
+                        const { data: nuevoPallet, error: errorCreacion } = await this.supabase
+                            .from('pallets')
+                            .insert({
+                                numero: id,
+                                posicion_x: palletInfo?.posicion?.x || 50,
+                                posicion_y: palletInfo?.posicion?.y || 50
+                            })
+                            .select()
+                            .single();
 
-            // REGISTRAR MOVIMIENTO EN HISTORIAL
-            async registrarMovimiento(tipo, materialId, cantidad, destino = '') {
-                if (!this.isOnline) return;
-                
-                try {
-                    const { error } = await this.supabase
+                        if (errorCreacion) throw errorCreacion;
+                        palletData = nuevoPallet;
+                    } else if (palletError) {
+                        throw palletError;
+                    }
+
+                    // 2. Insertar material en DB
+                    const { data: materialData, error: materialError } = await this.supabase
+                        .from('materiales')
+                        .insert({
+                            pallet_id: palletData.id,
+                            tipo: tipo,
+                            circunferencia: circunf,
+                            espesor: espesor,
+                            cantidad: cantidad,
+                            unidad: unidad,
+                            proveedor: proveedor,
+                            descripcion_completa: descripcion,
+                            usuario_registro: this.usuarioActual
+                        })
+                        .select()
+                        .single();
+
+                    if (materialError) throw materialError;
+
+                    // 3. Registrar movimiento
+                    await this.supabase
                         .from('movimientos')
                         .insert({
-                            material_id: materialId,
-                            tipo_movimiento: tipo,
+                            material_id: materialData.id,
+                            tipo_movimiento: 'entrada',
                             cantidad: cantidad,
-                            destino: destino,
-                            usuario: this.usuarioActual
+                            usuario: this.usuarioActual,
+                            observaciones: `Recibido de ${proveedor}`
                         });
+
+                    this.logInfo(`Material guardado en DB: P${id} - ${cantidad} ${unidad} de ${descripcion}`);
                     
-                    if (error) throw error;
+                    // Cerrar modal después de guardar exitosamente
+                    this.cerrarModal();
+                    
+                    // Forzar sincronización inmediata
+                    setTimeout(() => {
+                        this.cargarInventarioDesdeDB();
+                        this.actualizarContadores();
+                    }, 500);
                     
                 } catch (error) {
-                    this.logError('Error registrando movimiento', error);
+                    this.logError('Error guardando material en DB', error);
+                    this.mostrarErrorUsuario('Error al guardar en la base de datos: ' + error.message);
                 }
             }
 
-            // LIMPIAR FORMULARIO
-            limpiarFormularioRecepcion() {
-                document.getElementById('form-recepcion').reset();
-            }
-
-            // CERRAR MODALES
-            cerrarModal() {
-                document.getElementById('modal-recepcion').classList.remove('show');
-            }
-
-            cerrarModalPallet() {
-                document.getElementById('modal-pallet').classList.remove('show');
-            }
-
-            // RENDERIZAR PALLETS EN EL ALMACÉN
-            renderPallets() {
-                const warehouse = document.getElementById('warehouse');
-                // Eliminar pallets existentes
-                warehouse.querySelectorAll('.pallet').forEach(p => p.remove());
-                
-                Object.entries(this.inventario).forEach(([numero, data]) => {
-                    const pallet = this.crearElementoPallet(numero, data);
-                    warehouse.appendChild(pallet);
-                });
-            }
-
-            // CREAR ELEMENTO PALLET
-            crearElementoPallet(numero, data) {
-                const div = document.createElement('div');
-                div.className = 'pallet';
-                div.id = `pallet-${numero}`;
-                div.draggable = true;
-                
-                const cantidadMateriales = data.materiales.length;
-                const totalCantidad = data.materiales.reduce((sum, m) => sum + (m.cantidad || 0), 0);
-                
-                // Determinar clase según contenido
-                let statusClass = 'empty';
-                if (cantidadMateriales > 0) {
-                    statusClass = totalCantidad >= 50 ? 'full' : 'partial';
-                }
-                div.classList.add(statusClass);
-                
-                // Posicionar
-                div.style.left = data.posicion.x + 'px';
-                div.style.top = data.posicion.y + 'px';
-                
-                // Contenido
-                div.innerHTML = `
-                    <div class="pallet-number">P${numero}</div>
-                    <div class="pallet-quantity">${cantidadMateriales} items</div>
-                `;
-                
-                // Event listeners
-                div.addEventListener('click', () => this.abrirModalPallet(numero));
-                div.addEventListener('dragstart', (e) => this.iniciarArrastre(e, numero));
-                div.addEventListener('dragend', (e) => this.finalizarArrastre(e, numero));
-                
-                return div;
-            }
-
-            // ABRIR MODAL DE PALLET
-            async abrirModalPallet(numero) {
-                this.palletActual = numero;
-                const data = this.inventario[numero];
-                
-                document.getElementById('modal-pallet-title').textContent = `📦 Pallet ${numero} - ${data.materiales.length} materiales`;
-                
-                const modalBody = document.getElementById('modal-body');
-                modalBody.innerHTML = this.generarContenidoModalPallet(numero, data);
-                
-                document.getElementById('modal-pallet').classList.add('show');
-            }
-
-            // GENERAR CONTENIDO DEL MODAL PALLET
-            generarContenidoModalPallet(numero, data) {
-                const materiales = data.materiales || [];
-                
-                let html = `
-                    <div style="margin-bottom: 20px;">
-                        <button class="btn btn-success" onclick="inventorySystem.abrirModalRecepcionPallet(${numero})">
-                            ➕ Agregar Material
-                        </button>
-                    </div>
-                `;
-                
-                if (materiales.length === 0) {
-                    html += '<p style="text-align: center; color: #666; margin: 40px 0;">Este pallet está vacío</p>';
-                } else {
-                    html += '<div class="inventory-list">';
-                    materiales.forEach((material, index) => {
-                        html += `
-                            <div class="inventory-item">
-                                <div class="item-info">
-                                    <div class="item-name">${material.descripcion}</div>
-                                    <div class="item-details">
-                                        Proveedor: ${material.proveedor} | 
-                                        Cantidad: ${material.cantidad} ${material.unidad} |
-                                        Fecha: ${new Date(material.fecha).toLocaleDateString()}
-                                    </div>
-                                </div>
-                                <div class="item-actions">
-                                    <button class="btn btn-danger btn-small" 
-                                            onclick="inventorySystem.despacharMaterial(${material.id}, ${numero})">
-                                        📤 Despachar
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    html += '</div>';
-                }
-                
-                return html;
-            }
-
-            // ABRIR MODAL DE RECEPCIÓN ESPECÍFICO PARA UN PALLET
-            async abrirModalRecepcionPallet(numero) {
-                this.cerrarModalPallet();
-                await this.abrirModalRecepcion();
-                document.getElementById('pallet-select').value = numero;
-            }
-
-            // DESPACHAR MATERIAL
-            async despacharMaterial(materialId, palletNumero) {
-                const destino = prompt('¿Cuál es el destino del material?');
-                if (!destino) return;
-                
+            // FUNCIÓN PARA DESPACHAR CON SUPABASE
+            async simularDespacho(palletId) {
                 try {
-                    // Marcar como inactivo en Supabase
-                    const { error } = await this.supabase
+                    if (!this.supabase || !this.isOnline) {
+                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
+                        return;
+                    }
+
+                    const id = this.validarPalletId(palletId);
+                    const datos = this.inventario[id];
+                    
+                    if (!datos || datos.materiales.length === 0) {
+                        this.mostrarErrorUsuario('El pallet está vacío');
+                        return;
+                    }
+                    
+                    const confirmar = confirm(`¿Despachar todo el contenido del pallet P${id}?`);
+                    if (!confirmar) return;
+
+                    // Marcar todos los materiales como inactivos en DB
+                    const materialesIds = datos.materiales.map(m => m.id);
+                    
+                    const { error: updateError } = await this.supabase
                         .from('materiales')
                         .update({ activo: false })
-                        .eq('id', materialId);
+                        .in('id', materialesIds);
+
+                    if (updateError) throw updateError;
+
+                    // Registrar movimientos de despacho
+                    const movimientos = datos.materiales.map(material => ({
+                        material_id: material.id,
+                        tipo_movimiento: 'salida',
+                        cantidad: material.cantidad,
+                        cantidad_anterior: material.cantidad,
+                        usuario: this.usuarioActual,
+                        observaciones: `Despacho completo de P${id}`
+                    }));
+
+                    const { error: movimientosError } = await this.supabase
+                        .from('movimientos')
+                        .insert(movimientos);
+
+                    if (movimientosError) throw movimientosError;
+
+                    this.logInfo(`Despacho completo guardado en DB: P${id}`);
+                    this.cerrarModal();
                     
-                    if (error) throw error;
-                    
-                    // Registrar movimiento
-                    await this.registrarMovimiento('salida', materialId, 0, destino);
-                    
-                    // Actualizar inventario local
-                    this.inventario[palletNumero].materiales = this.inventario[palletNumero].materiales
-                        .filter(m => m.id !== materialId);
-                    
-                    // Actualizar UI
-                    this.renderPallets();
-                    this.actualizarEstadisticas();
-                    this.abrirModalPallet(palletNumero); // Refrescar modal
-                    
-                    this.logInfo(`Material ${materialId} despachado a ${destino}`);
+                    // Forzar sincronización inmediata
+                    setTimeout(() => {
+                        this.cargarInventarioDesdeDB();
+                        this.actualizarContadores();
+                    }, 500);
                     
                 } catch (error) {
-                    this.logError('Error despachando material', error);
-                    alert('Error al despachar material');
+                    this.logError('Error despachando en DB', error);
+                    this.mostrarErrorUsuario('Error al actualizar la base de datos: ' + error.message);
                 }
             }
 
-            // FUNCIONES DE ARRASTRE
-            iniciarArrastre(e, numero) {
-                this.draggedPallet = numero;
-                const rect = e.target.getBoundingClientRect();
-                const containerRect = e.target.parentElement.getBoundingClientRect();
-                this.dragOffset = {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
+            // CREAR NUEVO PALLET CON SUPABASE
+            async crearNuevoPallet() {
+                try {
+                    if (!this.supabase || !this.isOnline) {
+                        this.mostrarErrorUsuario('Sin conexión a la base de datos');
+                        return;
+                    }
+
+                    const warehouse = document.getElementById('warehouse');
+                    if (!warehouse) {
+                        throw new Error('Warehouse no encontrado');
+                    }
+                    
+                    // Obtener próximo número de pallet desde DB
+                    const { data: ultimoPallet, error } = await this.supabase
+                        .from('pallets')
+                        .select('numero')
+                        .order('numero', { ascending: false })
+                        .limit(1);
+
+                    if (error && error.code !== 'PGRST116') throw error;
+
+                    const nuevoId = (ultimoPallet && ultimoPallet.length > 0) ? ultimoPallet[0].numero + 1 : 1;
+                    
+                    // Posición inicial (centro del almacén)
+                    const warehouseRect = warehouse.getBoundingClientRect();
+                    const centroX = (warehouseRect.width / 2) - (CONFIG.PALLET_SIZE / 2);
+                    const centroY = (warehouseRect.height / 2) - (CONFIG.PALLET_SIZE / 2);
+                    
+                    const posX = Math.max(10, centroX);
+                    const posY = Math.max(10, centroY);
+
+                    // Crear pallet en DB
+                    const { data: palletDB, error: palletError } = await this.supabase
+                        .from('pallets')
+                        .insert({
+                            numero: nuevoId,
+                            posicion_x: posX,
+                            posicion_y: posY
+                        })
+                        .select()
+                        .single();
+
+                    if (palletError) throw palletError;
+
+                    // Crear pallet visual (oculto inicialmente)
+                    const pallet = document.createElement('div');
+                    pallet.className = 'pallet empty';
+                    pallet.dataset.pallet = nuevoId;
+                    pallet.title = `Pallet P${nuevoId} - Click para gestionar`;
+                    pallet.textContent = nuevoId;
+                    pallet.style.display = 'none';
+                    pallet.style.left = posX + 'px';
+                    pallet.style.top = posY + 'px';
+                    
+                    this.aplicarEstilosPallet(pallet);
+                    warehouse.appendChild(pallet);
+                    
+                    // Crear datos del inventario local
+                    this.inventario[nuevoId] = {
+                        materiales: [],
+                        total: 0,
+                        created: new Date().toISOString(),
+                        lastUpdated: new Date().toISOString(),
+                        visible: false,
+                        posicion: { x: posX, y: posY }
+                    };
+                    
+                    this.ultimoPalletId = Math.max(this.ultimoPalletId, nuevoId);
+                    
+                    this.logInfo(`Pallet P${nuevoId} creado en DB`);
+                    this.actualizarContadores();
+                    
+                    // Abrir modal inmediatamente para cargar material
+                    this.abrirModal(nuevoId);
+                    
+                    return nuevoId;
+                } catch (error) {
+                    this.logError('Error creando pallet en DB', error);
+                    this.mostrarErrorUsuario('Error al crear pallet en la base de datos');
+                    return null;
+                }
             }
 
-            async finalizarArrastre(e, numero) {
-                if (!this.draggedPallet || !this.isOnline) return;
-                
-                const container = document.getElementById('warehouse');
-                const containerRect = container.getBoundingClientRect();
-                
-                const newX = e.clientX - containerRect.left - this.dragOffset.x;
-                const newY = e.clientY - containerRect.top - this.dragOffset.y;
-                
-                // Actualizar posición en Supabase
+            // ACTUALIZAR POSICIÓN DE PALLET EN DB AL FINALIZAR ARRASTRE
+            async actualizarPosicionPallet(palletId, x, y) {
                 try {
+                    if (!this.supabase || !this.isOnline) return;
+
                     const { error } = await this.supabase
                         .from('pallets')
                         .update({
-                            posicion_x: newX,
-                            posicion_y: newY
+                            posicion_x: x,
+                            posicion_y: y
                         })
-                        .eq('numero', parseInt(numero));
-                    
-                    if (error) throw error;
-                    
-                    // Actualizar inventario local
-                    this.inventario[numero].posicion = { x: newX, y: newY };
-                    this.logInfo(`Pallet ${numero} movido a nueva posición`);
-                    
-                } catch (error) {
-                    this.logError('Error actualizando posición', error);
-                }
-                
-                this.draggedPallet = null;
-            }
+                        .eq('numero', palletId);
 
-            // CONFIGURAR EVENT LISTENERS
-            setupEventListeners() {
-                // Formulario de recepción
-                document.getElementById('form-recepcion').addEventListener('submit', (e) => {
-                    this.recibirMaterialFormulario(e);
-                });
-                
-                // Cerrar modales al hacer click fuera
-                document.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('modal')) {
-                        this.cerrarModal();
-                        this.cerrarModalPallet();
+                    if (error) throw error;
+
+                    // Actualizar posición local
+                    if (this.inventario[palletId]) {
+                        this.inventario[palletId].posicion = { x, y };
                     }
-                });
-                
-                // Drag & Drop para pallets
-                document.getElementById('warehouse').addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                });
-                
-                document.getElementById('warehouse').addEventListener('drop', (e) => {
-                    e.preventDefault();
-                });
-            }
 
-            // ACTUALIZAR ESTADÍSTICAS
-            actualizarEstadisticas() {
-                const totalPallets = Object.keys(this.inventario).length;
-                const totalMateriales = Object.values(this.inventario)
-                    .reduce((sum, pallet) => sum + pallet.materiales.length, 0);
-                const palletsVacios = Object.values(this.inventario)
-                    .filter(pallet => pallet.materiales.length === 0).length;
-                const utilizacion = totalPallets > 0 ? Math.round(((totalPallets - palletsVacios) / totalPallets) * 100) : 0;
-                
-                document.getElementById('total-pallets').textContent = totalPallets;
-                document.getElementById('total-materials').textContent = totalMateriales;
-                document.getElementById('summary-pallets').textContent = totalPallets;
-                document.getElementById('summary-materials').textContent = totalMateriales;
-                document.getElementById('summary-empty').textContent = palletsVacios;
-                document.getElementById('summary-usage').textContent = utilizacion + '%';
-            }
-
-            // ACTUALIZAR BARRA DE ESTADO
-            actualizarStatusBar(estado = null) {
-                const statusIndicator = document.getElementById('connection-status');
-                const statusText = document.getElementById('connection-text');
-                const lastSyncElement = document.getElementById('last-sync');
-                
-                let status = estado || (this.isOnline ? 'online' : 'offline');
-                
-                switch (status) {
-                    case 'online':
-                        statusIndicator.textContent = '🟢';
-                        statusText.textContent = 'Conectado';
-                        break;
-                    case 'offline':
-                        statusIndicator.textContent = '🔴';
-                        statusText.textContent = 'Sin conexión';
-                        break;
-                    case 'syncing':
-                        statusIndicator.textContent = '🟡';
-                        statusText.textContent = 'Sincronizando...';
-                        break;
-                }
-                
-                if (this.lastSync) {
-                    lastSyncElement.textContent = this.lastSync.toLocaleTimeString();
+                    this.logInfo(`Posición P${palletId} actualizada en DB: (${x}, ${y})`);
+                } catch (error) {
+                    this.logError('Error actualizando posición en DB', error);
                 }
             }
 
-            // GENERAR REPORTE
-            async generarReporte() {
+            cerrarModal() {
                 try {
-                    // Obtener movimientos recientes
-                    const { data: movimientos, error } = await this.supabase
-                        .from('movimientos')
-                        .select(`
-                            *,
-                            materiales (
-                                descripcion_completa,
-                                tipo,
-                                proveedor
-                            )
-                        `)
-                        .order('fecha', { ascending: false })
-                        .limit(50);
+                    const modal = document.getElementById('modal');
+                    if (modal) {
+                        modal.classList.remove('active');
+                        this.logInfo('Modal cerrado');
+                    }
+                } catch (error) {
+                    this.logError('Error cerrando modal', error);
+                }
+            }
+
+            // FUNCIONES DE BÚSQUEDA CON VALIDACIÓN
+            buscarMateriales() {
+                try {
+                    const tipo = document.getElementById('search-tipo')?.value || '';
+                    const circunf = document.getElementById('search-circunf')?.value || '';
+                    const espesor = document.getElementById('search-espesor')?.value || '';
+                    const angulo = document.getElementById('search-angulo')?.value || '';
                     
-                    if (error) throw error;
+                    this.logInfo('Realizando búsqueda', { tipo, circunf, espesor, angulo });
                     
-                    this.mostrarReporte(movimientos);
+                    let resultados = [];
+                    let totalCantidad = 0;
+                    
+                    // Buscar en todos los pallets
+                    for (const palletId in this.inventario) {
+                        const pallet = this.inventario[palletId];
+                        
+                        pallet.materiales.forEach(material => {
+                            let coincide = true;
+                            
+                            // Filtro por tipo
+                            if (tipo && !material.tipo.toLowerCase().includes(tipo.toLowerCase())) {
+                                coincide = false;
+                            }
+                            
+                            // Filtro por circunferencia
+                            if (circunf && material.circunferencia !== circunf) {
+                                coincide = false;
+                            }
+                            
+                            // Filtro por espesor
+                            if (espesor && material.espesor !== espesor) {
+                                coincide = false;
+                            }
+                            
+                            // Filtro por ángulo
+                            if (angulo && !material.descripcion?.includes(angulo + '°')) {
+                                coincide = false;
+                            }
+                            
+                            if (coincide) {
+                                resultados.push({
+                                    palletId: palletId,
+                                    ...material
+                                });
+                                totalCantidad += material.cantidad;
+                            }
+                        });
+                    }
+                    
+                    this.mostrarResultados(resultados, totalCantidad);
                     
                 } catch (error) {
-                    this.logError('Error generando reporte', error);
-                    alert('Error generando reporte');
+                    this.logError('Error en búsqueda', error);
+                    this.mostrarErrorUsuario('Error realizando búsqueda');
                 }
             }
 
-            // MOSTRAR REPORTE
-            mostrarReporte(movimientos) {
-                const modalBody = document.getElementById('modal-body');
-                
-                let html = `
-                    <h4>📊 Reporte de Movimientos Recientes</h4>
-                    <div style="margin: 20px 0;">
-                        <strong>Total inventario actual:</strong> ${Object.values(this.inventario).reduce((sum, p) => sum + p.materiales.length, 0)} materiales
-                    </div>
-                `;
-                
-                if (movimientos && movimientos.length > 0) {
-                    html += `
-                        <table class="movements-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Tipo</th>
-                                    <th>Material</th>
-                                    <th>Cantidad</th>
-                                    <th>Usuario</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
+            mostrarResultados(resultados, total) {
+                try {
+                    const container = document.getElementById('contenido-resultados');
+                    const panel = document.getElementById('resultados-busqueda');
                     
-                    movimientos.forEach(mov => {
-                        const fecha = new Date(mov.fecha).toLocaleDateString();
-                        const material = mov.materiales?.descripcion_completa || 'Material eliminado';
-                        html += `
-                            <tr>
-                                <td>${fecha}</td>
-                                <td><span class="tag ${mov.tipo_movimiento}">${mov.tipo_movimiento}</span></td>
-                                <td>${material}</td>
-                                <td>${mov.cantidad}</td>
-                                <td>${mov.usuario}</td>
-                            </tr>
+                    if (!container || !panel) {
+                        this.logError('Elementos de resultados no encontrados');
+                        return;
+                    }
+                    
+                    if (resultados.length === 0) {
+                        container.innerHTML = `
+                            <div style="background: #e53e3e; padding: 15px; border-radius: 6px; text-align: center;">
+                                <strong style="color: white;">No se encontraron materiales con esos criterios</strong>
+                            </div>
                         `;
+                    } else {
+                        // Agrupar por pallet
+                        const porPallet = {};
+                        resultados.forEach(r => {
+                            if (!porPallet[r.palletId]) porPallet[r.palletId] = [];
+                            porPallet[r.palletId].push(r);
+                        });
+                        
+                        container.innerHTML = `
+                            <div style="background: #38a169; padding: 15px; border-radius: 6px; margin-bottom: 15px; text-align: center;">
+                                <h4 style="color: white; margin: 0;">
+                                    Total encontrado: ${total} unidades en ${Object.keys(porPallet).length} pallet(s)
+                                </h4>
+                            </div>
+                            
+                            ${Object.keys(porPallet).map(palletId => {
+                                const items = porPallet[palletId];
+                                const subtotal = items.reduce((sum, item) => sum + item.cantidad, 0);
+                                
+                                return `
+                                    <div style="background: #f7fafc; margin: 10px 0; padding: 15px; border-radius: 8px; border-left: 4px solid #38a169;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <h4 style="color: #2d3748;">Pallet P${palletId}</h4>
+                                            <span style="background: #38a169; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold;">
+                                                ${subtotal} unidades
+                                            </span>
+                                        </div>
+                                        ${items.map(item => `
+                                            <div style="background: white; padding: 10px; margin: 5px 0; border-radius: 4px; border: 1px solid #e2e8f0;">
+                                                <strong style="color: #2d3748;">${item.descripcion || item.tipo}</strong><br>
+                                                <small style="color: #666;">
+                                                    ${item.cantidad} ${item.unidad || 'unidades'} | ${item.proveedor || 'N/A'}
+                                                </small>
+                                            </div>
+                                        `).join('')}
+                                        <button onclick="inventorySystem.abrirModal(${palletId})" style="margin-top: 10px; padding: 8px 12px; background: #2d3748; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                            Gestionar Pallet P${palletId}
+                                        </button>
+                                    </div>
+                                `;
+                            }).join('')}
+                        `;
+                    }
+                    
+                    panel.style.display = 'block';
+                    this.logInfo(`Búsqueda completada: ${resultados.length} resultados`);
+                    
+                } catch (error) {
+                    this.logError('Error mostrando resultados', error);
+                }
+            }
+
+            limpiarBusqueda() {
+                try {
+                    const campos = ['search-tipo', 'search-circunf', 'search-espesor', 'search-angulo'];
+                    campos.forEach(id => {
+                        const elemento = document.getElementById(id);
+                        if (elemento) elemento.value = '';
                     });
                     
-                    html += '</tbody></table>';
-                } else {
-                    html += '<p style="text-align: center; color: #666;">No hay movimientos registrados</p>';
+                    // Ocultar panel de resultados
+                    const panel = document.getElementById('resultados-busqueda');
+                    if (panel) {
+                        panel.style.display = 'none';
+                    }
+                    
+                    this.logInfo('Búsqueda limpiada');
+                    
+                } catch (error) {
+                    this.logError('Error limpiando búsqueda', error);
                 }
-                
-                modalBody.innerHTML = html;
-                document.getElementById('modal-pallet-title').textContent = '📊 Reporte del Sistema';
-                document.getElementById('modal-pallet').classList.add('show');
             }
 
-            // SISTEMA DE LOGGING
-            logInfo(mensaje) {
-                console.log(`[${new Date().toISOString()}] INFO: ${mensaje}`);
+            // GESTIÓN DE ERRORES HACIA EL USUARIO
+            mostrarErrorUsuario(mensaje) {
+                // En un sistema enterprise real, esto sería una notificación toast
+                alert(`Error: ${mensaje}`);
             }
 
-            logError(mensaje, error) {
-                console.error(`[${new Date().toISOString()}] ERROR: ${mensaje}`, error);
+            cambiarUsuario() {
+                try {
+                    const selector = document.getElementById('usuario-selector');
+                    if (!selector) return;
+                    
+                    const nuevoUsuario = this.validarUsuario(selector.value);
+                    this.usuarioActual = nuevoUsuario;
+                    this.logInfo(`Usuario cambiado a: ${nuevoUsuario}`);
+                } catch (error) {
+                    this.logError('Error cambiando usuario', error);
+                }
+            }
+
+            // CLEANUP AL DESTRUIR EL SISTEMA
+            destruir() {
+                try {
+                    if (this.heartbeatInterval) {
+                        clearInterval(this.heartbeatInterval);
+                    }
+                    
+                    if (this.pollingInterval) {
+                        clearInterval(this.pollingInterval);
+                    }
+                    
+                    if (this.realtimeChannel) {
+                        this.realtimeChannel.unsubscribe();
+                    }
+                    
+                    this.logInfo('Sistema destruido correctamente');
+                } catch (error) {
+                    this.logError('Error destruyendo sistema', error);
+                }
             }
         }
 
-        // INICIALIZACIÓN GLOBAL
-        let inventorySystem;
+        // Función global para cerrar modal
+        function cerrarModal() {
+            if (inventorySystem) {
+                inventorySystem.cerrarModal();
+            }
+        }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            inventorySystem = new InventorySystem();
-            await inventorySystem.init();
+        // INICIALIZACIÓN ENTERPRISE CON MANEJO DE ERRORES GLOBAL
+        let inventorySystem = null;
+
+        // Manejo de errores no capturados
+        window.addEventListener('error', (event) => {
+            if (inventorySystem) {
+                inventorySystem.logError('Error no capturado', event.error);
+            }
         });
 
-        // Prevenir cierre accidental
-        window.addEventListener('beforeunload', (e) => {
-            if (Object.values(inventorySystem?.inventario || {}).some(p => p.materiales.length > 0)) {
-                e.preventDefault();
-                e.returnValue = '';
+        window.addEventListener('unhandledrejection', (event) => {
+            if (inventorySystem) {
+                inventorySystem.logError('Promise rechazada', event.reason);
+            }
+        });
+
+        // Inicialización del sistema
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // FORZAR CSS PARA PALLETS 20px x 20px CON NUMERACIÓN
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    .pallet {
+                        width: 20px !important;
+                        height: 20px !important;
+                        min-width: 20px !important;
+                        min-height: 20px !important;
+                        max-width: 20px !important;
+                        max-height: 20px !important;
+                        box-sizing: border-box !important;
+                        font-size: 8px !important;
+                        color: white !important;
+                        font-weight: bold !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        text-shadow: 1px 1px 1px rgba(0,0,0,0.8) !important;
+                    }
+                    .pallet:hover {
+                        width: 20px !important;
+                        height: 20px !important;
+                        transform: none !important;
+                        font-size: 9px !important;
+                    }
+                    .pallet.dragging {
+                        width: 20px !important;
+                        height: 20px !important;
+                        transform: none !important;
+                        font-size: 10px !important;
+                    }
+                `;
+                document.head.appendChild(style);
+                
+                inventorySystem = new InventorySystem();
+                inventorySystem.startTime = Date.now();
+                
+                // Exponer funciones globales necesarias
+                window.cambiarUsuario = () => inventorySystem.cambiarUsuario();
+                window.buscarMateriales = () => inventorySystem.buscarMateriales();
+                window.limpiarBusqueda = () => inventorySystem.limpiarBusqueda();
+                
+            } catch (error) {
+                console.error('Error fatal inicializando sistema:', error);
+                alert('Error crítico: No se pudo inicializar el sistema de inventario');
+            }
+        });
+
+        // Cleanup al cerrar la página
+        window.addEventListener('beforeunload', () => {
+            if (inventorySystem) {
+                inventorySystem.destruir();
             }
         });
     </script>
