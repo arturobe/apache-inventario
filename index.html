@@ -721,7 +721,7 @@
                 }
             }
 
-            // CONFIGURACIÓN DE POLLING MEJORADO PARA SINCRONIZACIÓN COMPLETA
+            // CONFIGURACIÓN DE POLLING CORREGIDO PARA SINCRONIZACIÓN COMPLETA
             configurarSincronizacionTiempoReal() {
                 try {
                     if (!this.supabase || !this.isOnline) return;
@@ -753,7 +753,7 @@
                                 cambiosDetectados = true;
                             }
                             
-                            // 2. Verificar cambios en PALLETS (nuevos pallets o posiciones)
+                            // 2. Verificar cambios en PALLETS (nuevos pallets)
                             const { data: palletsRecientes, error: errorPallets } = await this.supabase
                                 .from('pallets')
                                 .select('*')
@@ -762,24 +762,11 @@
                             if (errorPallets) throw errorPallets;
                             
                             if (palletsRecientes && palletsRecientes.length > 0) {
-                                this.logInfo(`Polling detectó ${palletsRecientes.length} cambios en pallets (nuevos o reposicionados)`);
+                                this.logInfo(`Polling detectó ${palletsRecientes.length} pallets nuevos`);
                                 cambiosDetectados = true;
                             }
                             
-                            // 3. Verificar cambios en POSICIONES (pallets movidos)
-                            const { data: posicionesActualizadas, error: errorPosiciones } = await this.supabase
-                                .from('pallets')
-                                .select('*')
-                                .gte('updated_at', this.ultimaVerificacion);
-                            
-                            if (errorPosiciones) throw errorPosiciones;
-                            
-                            if (posicionesActualizadas && posicionesActualizadas.length > 0) {
-                                this.logInfo(`Polling detectó ${posicionesActualizadas.length} pallets reposicionados`);
-                                cambiosDetectados = true;
-                            }
-                            
-                            // 4. Si hay cambios, recargar inventario completo
+                            // 3. Si hay cambios, recargar inventario completo
                             if (cambiosDetectados) {
                                 this.logInfo('Sincronizando inventario por cambios detectados...');
                                 await this.cargarInventarioDesdeDB();
