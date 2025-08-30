@@ -714,6 +714,213 @@
                 grid-template-columns: 1fr;
                 grid-template-rows: auto 1fr;
             }
+
+            editarMaterial(materialId) {
+                const datos = this.inventario[this.palletActual];
+                const material = datos.materiales.find(m => m.id === materialId);
+                
+                if (!material) {
+                    this.mostrarNotificacion('Material no encontrado', 'error');
+                    return;
+                }
+
+                const content = document.getElementById('modal-content');
+                content.innerHTML = `
+                    <div class="form-section">
+                        <h4>${t('edit_material_details')}</h4>
+                        
+                        <div class="form-section">
+                            <h4>${t('material_info')}</h4>
+                            <div class="form-grid cols-2">
+                                <div class="form-group">
+                                    <label>${t('material_type')}</label>
+                                    <input type="text" id="tipo-editar" value="${material.tipo || ''}" placeholder="${t('select_or_type_material')}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('supplier')}</label>
+                                    <input type="text" id="proveedor-editar" value="${material.proveedor || ''}" placeholder="${t('supplier_name')}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>${t('technical_specs')}</h4>
+                            <div class="form-grid cols-4">
+                                <div class="form-group">
+                                    <label>${t('circumference')}</label>
+                                    <input type="text" id="circunferencia-editar" value="${material.circunferencia || ''}" placeholder="12.0&quot;">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('thickness')}</label>
+                                    <input type="text" id="espesor-editar" value="${material.espesor || ''}" placeholder="1.5&quot;">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('length')}</label>
+                                    <input type="text" id="longitud-editar" value="" placeholder="20 pies">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('weight_optional')}</label>
+                                    <input type="text" id="peso-editar" value="" placeholder="500 kg">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>${t('quantity_measures')}</h4>
+                            <div class="form-grid cols-2">
+                                <div class="form-group">
+                                    <label>${t('quantity_received')}</label>
+                                    <input type="number" id="cantidad-editar" value="${material.cantidad || 0}" placeholder="100" required min="0" step="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('unit_measure')}</label>
+                                    <select id="unidad-editar" required>
+                                        <option value="pies lineales" ${material.unidad === 'pies lineales' ? 'selected' : ''}>${t('linear_feet')}</option>
+                                        <option value="piezas" ${material.unidad === 'piezas' ? 'selected' : ''}>${t('pieces')}</option>
+                                        <option value="metros" ${material.unidad === 'metros' ? 'selected' : ''}>${t('meters')}</option>
+                                        <option value="kilogramos" ${material.unidad === 'kilogramos' ? 'selected' : ''}>${t('kilograms')}</option>
+                                        <option value="toneladas" ${material.unidad === 'toneladas' ? 'selected' : ''}>${t('tons')}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="action-button success" onclick="window.sistemaInventario.procesarEdicionMaterial('${materialId}')">
+                                ${t('save_changes')}
+                            </button>
+                            <button class="action-button secondary" onclick="window.sistemaInventario.mostrarSeccion('editar')">
+                                ${t('cancel_edit')}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async eliminarMaterial(materialId) {
+                try {
+                    if (!confirm(t('confirm_delete_material'))) {
+                        return;
+                    }
+
+                    const datos = this.inventario[this.palletActual];
+                    const materialIndex = datos.materiales.findIndex(m => m.id === materialId);
+                    
+                    if (materialIndex === -1) {
+                        this.mostrarNotificacion('Material no encontrado', 'error');
+                        return;
+                    }
+
+                    const material = datos.materiales[materialIndex];
+
+                    // Eliminar de la base de datos si está en línea
+                    if (this.isOnline && this.supabase) {
+                        const { error } = await this.supabase
+                            .from('materiales')
+                            .delete()
+                            .eq('id', materialId);
+                        
+                        if (error) throw error;
+                    }
+
+                    // Eliminar del inventario local
+                    datos.materiales.splice(materialIndex, 1);
+                    datos.total -= material.cantidad;
+
+                    // Si no quedan materiales, eliminar todo el pallet
+                    if (datos.materiales.length === 0) {
+                        delete this.inventario[this.palletActual];
+                        const palletElement = document.querySelector(`[data-pallet="${this.palletActual}"]`);
+                        if (palletElement) palletElement.remove();
+                        this.cerrarModal();
+                    } else {
+                        // Actualizar la vista
+                        this.actualizarNavegacionModal(this.palletActual);
+                        this.mostrarSeccion('editar');
+                    }
+
+                    this.actualizarEstadisticas();
+                    this.mostrarNotificacion(t('material_deleted'), 'success');
+                    
+                } catch (error) {
+                    console.error('Error eliminando material:', error);
+                    this.mostrarNotificacion(t('error_deleting_material') + ' ' + error.message, 'error');
+                }
+            }
+
+            async procesarEdicionMaterial(materialId) {
+                try {
+                    const datos = this.inventario[this.palletActual];
+                    const materialIndex = datos.materiales.findIndex(m => m.id === materialId);
+                    
+                    if (materialIndex === -1) {
+                        this.mostrarNotificacion('Material no encontrado', 'error');
+                        return;
+                    }
+
+                    const material = datos.materiales[materialIndex];
+                    const cantidadAnterior = material.cantidad;
+
+                    // Obtener datos del formulario
+                    const tipo = document.getElementById('tipo-editar').value.trim() || 'Material';
+                    const proveedor = document.getElementById('proveedor-editar').value.trim() || 'Sin especificar';
+                    const circunf = document.getElementById('circunferencia-editar').value.trim();
+                    const espesor = document.getElementById('espesor-editar').value.trim();
+                    const longitud = document.getElementById('longitud-editar').value.trim();
+                    const peso = document.getElementById('peso-editar').value.trim();
+                    const cantidad = parseInt(document.getElementById('cantidad-editar').value) || 0;
+                    const unidad = document.getElementById('unidad-editar').value || 'unidades';
+
+                    // Generar nueva descripción
+                    let descripcion = tipo;
+                    if (circunf && espesor) {
+                        descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
+                        if (longitud) descripcion += ` × ${longitud}`;
+                        if (peso) descripcion += ` (${peso})`;
+                    }
+
+                    // Actualizar base de datos si está en línea
+                    if (this.isOnline && this.supabase) {
+                        const { error } = await this.supabase
+                            .from('materiales')
+                            .update({
+                                tipo: tipo,
+                                circunferencia: circunf || null,
+                                espesor: espesor || null,
+                                cantidad: cantidad,
+                                unidad: unidad,
+                                proveedor: proveedor,
+                                descripcion_completa: descripcion
+                            })
+                            .eq('id', materialId);
+                        
+                        if (error) throw error;
+                    }
+
+                    // Actualizar inventario local
+                    material.tipo = tipo;
+                    material.circunferencia = circunf || null;
+                    material.espesor = espesor || null;
+                    material.cantidad = cantidad;
+                    material.unidad = unidad;
+                    material.proveedor = proveedor;
+                    material.descripcion = descripcion;
+
+                    // Recalcular total del pallet
+                    datos.total = datos.total - cantidadAnterior + cantidad;
+
+                    // Actualizar navegación y mostrar vista de edición
+                    this.actualizarNavegacionModal(this.palletActual);
+                    this.mostrarSeccion('editar');
+                    this.actualizarEstadisticas();
+                    
+                    this.mostrarNotificacion(t('material_updated'), 'success');
+                    
+                } catch (error) {
+                    console.error('Error actualizando material:', error);
+                    this.mostrarNotificacion(t('error_updating_material') + ' ' + error.message, 'error');
+                }
+            }
             
             .sidebar {
                 position: relative;
@@ -901,6 +1108,7 @@
                 <div class="section-navigation" id="section-nav" style="display: none;">
                     <button class="nav-tab active" id="tab-inventario">Ver Inventario</button>
                     <button class="nav-tab" id="tab-agregar">Agregar Material</button>
+                    <button class="nav-tab" id="tab-editar">Editar Materiales</button>
                     <button class="nav-tab" id="tab-despachar">Despachar Material</button>
                 </div>
                 <div class="section-content" id="modal-content"></div>
@@ -937,6 +1145,7 @@
                 pallet_management: 'Gestión de Pallet',
                 view_inventory: 'Ver Inventario',
                 add_material: 'Agregar Material',
+                edit_materials: 'Editar Materiales',
                 dispatch_material: 'Despachar Material',
                 create_new_pallet_title: 'Crear Nuevo Pallet',
                 pallet_info: 'Información del Pallet',
@@ -1000,7 +1209,17 @@
                 error_renaming_pallet: 'Error al renombrar pallet:',
                 new_pallet_click: 'Nuevo pallet - Click para cargar material',
                 pallet_drag_manage: 'Arrastra para mover o click para gestionar',
-                at: 'a las'
+                at: 'a las',
+                edit_material: 'Editar Material',
+                delete_material: 'Eliminar',
+                save_changes: 'Guardar Cambios',
+                cancel_edit: 'Cancelar',
+                material_updated: 'Material actualizado exitosamente',
+                material_deleted: 'Material eliminado exitosamente',
+                error_updating_material: 'Error al actualizar material:',
+                error_deleting_material: 'Error al eliminar material:',
+                confirm_delete_material: '¿Estás seguro de eliminar este material?',
+                edit_material_details: 'Editar Detalles del Material'
             },
             en: {
                 system_title: 'WorkYard Manager',
@@ -1026,6 +1245,7 @@
                 pallet_management: 'Pallet Management',
                 view_inventory: 'View Inventory',
                 add_material: 'Add Material',
+                edit_materials: 'Edit Materials',
                 dispatch_material: 'Dispatch Material',
                 create_new_pallet_title: 'Create New Pallet',
                 pallet_info: 'Pallet Information',
@@ -1089,7 +1309,17 @@
                 error_renaming_pallet: 'Error renaming pallet:',
                 new_pallet_click: 'New pallet - Click to load material',
                 pallet_drag_manage: 'Drag to move or click to manage',
-                at: 'at'
+                at: 'at',
+                edit_material: 'Edit Material',
+                delete_material: 'Delete',
+                save_changes: 'Save Changes',
+                cancel_edit: 'Cancel',
+                material_updated: 'Material updated successfully',
+                material_deleted: 'Material deleted successfully',
+                error_updating_material: 'Error updating material:',
+                error_deleting_material: 'Error deleting material:',
+                confirm_delete_material: 'Are you sure you want to delete this material?',
+                edit_material_details: 'Edit Material Details'
             }
         };
 
@@ -1307,6 +1537,7 @@
                 // Configurar tabs del modal
                 const tabInventario = document.getElementById('tab-inventario');
                 const tabAgregar = document.getElementById('tab-agregar');
+                const tabEditar = document.getElementById('tab-editar');
                 const tabDespachar = document.getElementById('tab-despachar');
 
                 if (tabInventario) {
@@ -1314,6 +1545,9 @@
                 }
                 if (tabAgregar) {
                     tabAgregar.addEventListener('click', () => this.mostrarSeccion('agregar'));
+                }
+                if (tabEditar) {
+                    tabEditar.addEventListener('click', () => this.mostrarSeccion('editar'));
                 }
                 if (tabDespachar) {
                     tabDespachar.addEventListener('click', () => this.mostrarSeccion('despachar'));
@@ -1795,7 +2029,8 @@
                 
                 if (tabs[0]) tabs[0].textContent = t('view_inventory') + ' (' + datos.total + ')';
                 if (tabs[1]) tabs[1].textContent = t('add_material');
-                if (tabs[2]) tabs[2].textContent = t('dispatch_material');
+                if (tabs[2]) tabs[2].textContent = t('edit_materials') + ' (' + datos.materiales.length + ')';
+                if (tabs[3]) tabs[3].textContent = t('dispatch_material');
             }
 
             mostrarSeccion(seccion) {
@@ -1820,9 +2055,16 @@
                         content.innerHTML = this.generarVistaAgregar();
                         this.configurarEventListenersAgregar();
                         break;
-                    case 'despachar':
+                    case 'editar':
                         if (document.querySelectorAll('.nav-tab')[2]) {
                             document.querySelectorAll('.nav-tab')[2].classList.add('active');
+                        }
+                        content.innerHTML = this.generarVistaEditar(datos);
+                        this.configurarEventListenersEditar();
+                        break;
+                    case 'despachar':
+                        if (document.querySelectorAll('.nav-tab')[3]) {
+                            document.querySelectorAll('.nav-tab')[3].classList.add('active');
                         }
                         content.innerHTML = this.generarVistaDespachar(datos);
                         this.configurarEventListenersDespachar();
@@ -1986,7 +2228,46 @@
                 `;
             }
 
-            generarVistaDespachar(datos) {
+            generarVistaEditar(datos) {
+                const materialesHTML = datos.materiales.map((item, index) => {
+                    const fecha = new Date(item.fecha);
+                    return `
+                        <div class="material-card" id="material-${item.id}">
+                            <div class="material-header">
+                                <div>
+                                    <div class="material-title">${item.descripcion || item.tipo}</div>
+                                    <div class="material-specs">
+                                        ${t('specifications')} ${item.circunferencia ? item.circunferencia + '″ ⌀' : ''} 
+                                        ${item.espesor ? ' × ' + item.espesor + '″ ' + t('thickness').toLowerCase() : ''}<br>
+                                        ${t('supplier_label')} ${item.proveedor || t('not_specified')}<br>
+                                        ${t('received')} ${fecha.toLocaleDateString()}
+                                    </div>
+                                </div>
+                                <div class="quantity-badge">${item.cantidad} ${item.unidad || t('units')}</div>
+                            </div>
+                            <div class="dispatch-controls">
+                                <div class="button-group" style="margin: 0; gap: 8px; justify-content: flex-start;">
+                                    <button class="action-button secondary" style="min-width: auto; height: 36px; padding: 8px 12px; font-size: 14px;" onclick="window.sistemaInventario.editarMaterial('${item.id}')">
+                                        ${t('edit_material')}
+                                    </button>
+                                    <button class="action-button danger" style="min-width: auto; height: 36px; padding: 8px 12px; font-size: 14px;" onclick="window.sistemaInventario.eliminarMaterial('${item.id}')">
+                                        ${t('delete_material')}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="form-section">
+                        <h4>${t('edit_materials')} - Pallet P${this.palletActual}</h4>
+                        <div class="scrollable-area" style="max-height: 500px;">
+                            ${materialesHTML}
+                        </div>
+                    </div>
+                `;
+            }
                 const materialesHTML = datos.materiales.map(item => {
                     const fecha = new Date(item.fecha);
                     return `
@@ -2082,6 +2363,11 @@
                 if (btnCompleto) {
                     btnCompleto.addEventListener('click', () => this.despacharPalletCompleto());
                 }
+            }
+
+            configurarEventListenersEditar() {
+                // Los event listeners se configuran directamente en el HTML con onclick
+                // para evitar problemas de timing con elementos dinámicos
             }
 
             configurarEventListenersRenombrar() {
