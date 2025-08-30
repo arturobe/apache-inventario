@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="page-title">Sistema de Inventario Apache - Enterprise</title>
+    <title id="page-title">WorkYard Manager - Enterprise</title>
     <style>
         :root {
             --crimson: #C8102E;
@@ -472,6 +472,30 @@
             transform: translateY(-1px);
         }
 
+        /* Estilos para datalist */
+        .form-group input[list] {
+            position: relative;
+        }
+
+        .form-group input[list]::-webkit-calendar-picker-indicator {
+            display: none;
+        }
+
+        .form-group input[list]::after {
+            content: '▼';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--grey);
+            pointer-events: none;
+            font-size: 12px;
+        }
+
+        datalist {
+            display: none;
+        }
+
         .action-button {
             padding: 16px 24px;
             border: none;
@@ -737,7 +761,7 @@
     <div class="header">
         <div class="header-brand">
             <img src="https://www.apacheip.com/themes/custom/apache/images/apache-logo.png" alt="Apache Logo" class="header-logo">
-            <h1 data-i18n="system_title">Sistema de Inventario Apache</h1>
+            <h1 data-i18n="system_title">WorkYard Manager</h1>
         </div>
         <div class="user-controls">
             <div class="language-selector">
@@ -846,8 +870,8 @@
         const i18n = {
             es: {
                 // Títulos y navegación
-                system_title: 'Sistema de Inventario Apache',
-                page_title: 'Sistema de Inventario Apache - Enterprise',
+                system_title: 'WorkYard Manager',
+                page_title: 'WorkYard Manager - Enterprise',
                 connected: 'Conectado',
                 disconnected: 'Sin conexión',
                 demo_mode: 'Modo Demo',
@@ -893,6 +917,7 @@
                 technical_specs: 'Especificaciones Técnicas',
                 quantity_measures: 'Cantidad y Medidas',
                 select_type: 'Seleccionar tipo...',
+                select_or_type_material: 'Selecciona o escribe tipo de material',
                 steel_sheet: 'Lámina de Acero',
                 strap_band: 'Strap/Fleje',
                 elbow_90_deg: 'Codo 90°',
@@ -967,8 +992,8 @@
             },
             en: {
                 // Titles and navigation
-                system_title: 'Apache Inventory System',
-                page_title: 'Apache Inventory System - Enterprise',
+                system_title: 'WorkYard Manager',
+                page_title: 'WorkYard Manager - Enterprise',
                 connected: 'Connected',
                 disconnected: 'Disconnected',
                 demo_mode: 'Demo Mode',
@@ -1014,6 +1039,7 @@
                 technical_specs: 'Technical Specifications',
                 quantity_measures: 'Quantity and Measurements',
                 select_type: 'Select type...',
+                select_or_type_material: 'Select or type material type',
                 steel_sheet: 'Steel Sheet',
                 strap_band: 'Strap/Band',
                 elbow_90_deg: '90° Elbow',
@@ -1152,7 +1178,7 @@
             return i18n[currentLanguage][key] || key;
         }
 
-        console.log('=== SISTEMA APACHE INVENTARIO ENTERPRISE ===');
+        console.log('=== WORKYARD MANAGER ENTERPRISE ===');
         
         const CONFIG = {
             SUPABASE_URL: 'https://iuewoscogzfikwtzjjud.supabase.co',
@@ -1656,16 +1682,27 @@
                         <div class="form-grid cols-2">
                             <div class="form-group">
                                 <label>${t('material_type')}</label>
-                                <select id="tipo-material-nuevo" required>
-                                    <option value="">${t('select_type')}</option>
-                                    <option value="Lamina">${t('steel_sheet')}</option>
-                                    <option value="Strap">${t('strap_band')}</option>
-                                    <option value="Codo 90">${t('elbow_90_deg')}</option>
-                                    <option value="Codo 45">${t('elbow_45_deg')}</option>
-                                    <option value="Tuberia">${t('pipe')}</option>
-                                    <option value="Accesorio">${t('accessory')}</option>
-                                    <option value="Otro">${t('other')}</option>
-                                </select>
+                                <input type="text" id="tipo-material-nuevo" list="material-types" placeholder="${t('select_or_type_material')}" required>
+                                <datalist id="material-types">
+                                    <option value="${t('steel_sheet')}"></option>
+                                    <option value="${t('strap_band')}"></option>
+                                    <option value="${t('elbow_90_deg')}"></option>
+                                    <option value="${t('elbow_45_deg')}"></option>
+                                    <option value="${t('pipe')}"></option>
+                                    <option value="${t('accessory')}"></option>
+                                    <option value="${t('other')}"></option>
+                                    <option value="Lamina"></option>
+                                    <option value="Strap"></option>
+                                    <option value="Codo 90"></option>
+                                    <option value="Codo 45"></option>
+                                    <option value="Tuberia"></option>
+                                    <option value="Accesorio"></option>
+                                    <option value="Fleje"></option>
+                                    <option value="Plancha"></option>
+                                    <option value="Varilla"></option>
+                                    <option value="Perfil"></option>
+                                    <option value="Soldadura"></option>
+                                </datalist>
                             </div>
                             <div class="form-group">
                                 <label>${t('supplier')}</label>
@@ -1864,16 +1901,27 @@
                             <div class="form-grid cols-2">
                                 <div class="form-group">
                                     <label>${t('material_type')}</label>
-                                    <select id="tipo-agregar" required>
-                                        <option value="">${t('select_type')}</option>
-                                        <option value="Lamina">${t('steel_sheet')}</option>
-                                        <option value="Strap">${t('strap_band')}</option>
-                                        <option value="Codo 90">${t('elbow_90_deg')}</option>
-                                        <option value="Codo 45">${t('elbow_45_deg')}</option>
-                                        <option value="Tuberia">${t('pipe')}</option>
-                                        <option value="Accesorio">${t('accessory')}</option>
-                                        <option value="Otro">${t('other')}</option>
-                                    </select>
+                                    <input type="text" id="tipo-agregar" list="material-types-add" placeholder="${t('select_or_type_material')}" required>
+                                    <datalist id="material-types-add">
+                                        <option value="${t('steel_sheet')}"></option>
+                                        <option value="${t('strap_band')}"></option>
+                                        <option value="${t('elbow_90_deg')}"></option>
+                                        <option value="${t('elbow_45_deg')}"></option>
+                                        <option value="${t('pipe')}"></option>
+                                        <option value="${t('accessory')}"></option>
+                                        <option value="${t('other')}"></option>
+                                        <option value="Lamina"></option>
+                                        <option value="Strap"></option>
+                                        <option value="Codo 90"></option>
+                                        <option value="Codo 45"></option>
+                                        <option value="Tuberia"></option>
+                                        <option value="Accesorio"></option>
+                                        <option value="Fleje"></option>
+                                        <option value="Plancha"></option>
+                                        <option value="Varilla"></option>
+                                        <option value="Perfil"></option>
+                                        <option value="Soldadura"></option>
+                                    </datalist>
                                 </div>
                                 <div class="form-group">
                                     <label>${t('supplier')}</label>
@@ -2520,13 +2568,13 @@
         }
 
         // Inicialización automática con manejo robusto
-        console.log('=== INICIALIZANDO SISTEMA ENTERPRISE ===');
+        console.log('=== INICIALIZANDO WORKYARD MANAGER ENTERPRISE ===');
         
         function inicializarSistema() {
             try {
                 window.inventorySystem = new InventorySystem();
                 window.inventorySystem.init().then(() => {
-                    console.log('=== SISTEMA ENTERPRISE LISTO ===');
+                    console.log('=== WORKYARD MANAGER ENTERPRISE LISTO ===');
                 }).catch(error => {
                     console.error('ERROR EN INICIALIZACIÓN ASYNC:', error);
                 });
