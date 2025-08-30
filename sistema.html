@@ -794,16 +794,10 @@
                 <div class="search-grid">
                     <div class="form-field">
                         <label data-i18n="material_type">Tipo de Material</label>
-                        <select id="search-tipo">
-                            <option value="" data-i18n="all_types">Todos los tipos</option>
-                            <option value="Lamina" data-i18n="sheet">Lámina</option>
-                            <option value="Strap" data-i18n="strap">Strap</option>
-                            <option value="90" data-i18n="elbow_90">Codo 90°</option>
-                            <option value="45" data-i18n="elbow_45">Codo 45°</option>
-                            <option value="Tuberia" data-i18n="pipe">Tubería</option>
-                            <option value="Accesorio" data-i18n="accessory">Accesorio</option>
-                            <option value="Otro" data-i18n="other">Otro</option>
-                        </select>
+                        <input type="text" id="search-tipo" list="search-material-types" placeholder="${t('select_or_type_material')}">
+                        <datalist id="search-material-types">
+                            <option value=""></option>
+                        </datalist>
                     </div>
                     
                     <div class="form-field">
@@ -827,6 +821,9 @@
                     <div><span data-i18n="total_pallets">Total pallets:</span> <strong id="contador-pallets">0</strong></div>
                     <div><span data-i18n="occupied">Ocupados:</span> <strong id="contador-ocupados">0</strong></div>
                 </div>
+                <button class="btn-clear" style="margin-top: 16px; font-size: 12px; padding: 8px;" onclick="inventorySystem.resetearSistema()">
+                    Resetear Sistema
+                </button>
             </div>
         </div>
 
@@ -1146,6 +1143,11 @@
             if (window.inventorySystem && window.inventorySystem.palletActual) {
                 window.inventorySystem.actualizarNavegacionModal(window.inventorySystem.palletActual);
                 window.inventorySystem.mostrarSeccion(window.inventorySystem.seccionActiva);
+            }
+
+            // Actualizar opciones de búsqueda con nuevas traducciones
+            if (window.inventorySystem) {
+                window.inventorySystem.actualizarOpcionesBusqueda();
             }
 
             console.log('Language changed to:', currentLanguage);
@@ -1545,6 +1547,7 @@
                     }
 
                     this.renderizarPalletsVisuales();
+                    this.actualizarOpcionesBusqueda();
                     this.logInfo('Inventario cargado: ' + (materiales?.length || 0) + ' materiales');
 
                 } catch (error) {
@@ -1682,7 +1685,7 @@
                         <div class="form-grid cols-2">
                             <div class="form-group">
                                 <label>${t('material_type')}</label>
-                                <input type="text" id="tipo-material-nuevo" list="material-types" placeholder="${t('select_or_type_material')}" required>
+                                <input type="text" id="tipo-material-nuevo" list="material-types" placeholder="${t('select_or_type_material')}" required onchange="inventorySystem.toggleCamposCodos('nuevo')">
                                 <datalist id="material-types">
                                     <option value="${t('steel_sheet')}"></option>
                                     <option value="${t('strap_band')}"></option>
@@ -1901,7 +1904,7 @@
                             <div class="form-grid cols-2">
                                 <div class="form-group">
                                     <label>${t('material_type')}</label>
-                                    <input type="text" id="tipo-agregar" list="material-types-add" placeholder="${t('select_or_type_material')}" required>
+                                    <input type="text" id="tipo-agregar" list="material-types-add" placeholder="${t('select_or_type_material')}" required onchange="inventorySystem.toggleCamposCodos('agregar')">
                                     <datalist id="material-types-add">
                                         <option value="${t('steel_sheet')}"></option>
                                         <option value="${t('strap_band')}"></option>
@@ -1950,6 +1953,29 @@
                                     <input type="text" id="peso-agregar" placeholder="500 kg">
                                 </div>
                             </div>
+                            
+                            <!-- Campos específicos para codos -->
+                            <div id="campos-codos-agregar" style="display: none;">
+                                <h4 style="margin-top: 20px;">${currentLanguage === 'es' ? 'Medidas de Codo' : 'Elbow Measurements'}</h4>
+                                <div class="form-grid cols-4">
+                                    <div class="form-group">
+                                        <label>A</label>
+                                        <input type="text" id="medida-a-agregar" placeholder="6.0&quot;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>B</label>
+                                        <input type="text" id="medida-b-agregar" placeholder="4.0&quot;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>C</label>
+                                        <input type="text" id="medida-c-agregar" placeholder="3.0&quot;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label># ${currentLanguage === 'es' ? 'Pieza' : 'Piece'}</label>
+                                        <input type="text" id="numero-pieza-agregar" placeholder="001">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-section">
@@ -1975,6 +2001,9 @@
                         <div class="button-group">
                             <button class="action-button success" onclick="inventorySystem.procesarAgregarMaterial()">
                                 ${t('add_material_btn')}
+                            </button>
+                            <button class="action-button danger" onclick="inventorySystem.eliminarPallet()">
+                                ${currentLanguage === 'es' ? 'Eliminar Pallet' : 'Delete Pallet'}
                             </button>
                         </div>
                     </div>
@@ -2064,21 +2093,22 @@
                     const nombrePallet = document.getElementById('nombre-pallet-nuevo').value.trim();
                     
                     // Obtener datos del material
-                    const tipo = document.getElementById('tipo-material-nuevo').value;
-                    const proveedor = document.getElementById('proveedor-nuevo').value;
-                    const circunf = document.getElementById('circunferencia-nuevo').value;
-                    const espesor = document.getElementById('espesor-nuevo').value;
-                    const longitud = document.getElementById('longitud-nuevo').value;
-                    const peso = document.getElementById('peso-nuevo').value;
-                    const cantidad = parseInt(document.getElementById('cantidad-nuevo').value);
-                    const unidad = document.getElementById('unidad-nuevo').value;
+                    const tipo = document.getElementById('tipo-material-nuevo').value.trim() || 'Material';
+                    const proveedor = document.getElementById('proveedor-nuevo').value.trim() || 'Sin especificar';
+                    const circunf = document.getElementById('circunferencia-nuevo').value.trim();
+                    const espesor = document.getElementById('espesor-nuevo').value.trim();
+                    const longitud = document.getElementById('longitud-nuevo').value.trim();
+                    const peso = document.getElementById('peso-nuevo').value.trim();
+                    const cantidad = parseInt(document.getElementById('cantidad-nuevo').value) || 1;
+                    const unidad = document.getElementById('unidad-nuevo').value || 'unidades';
+                    
+                    // Obtener datos adicionales para codos
+                    const medidaA = document.getElementById('medida-a-nuevo')?.value.trim();
+                    const medidaB = document.getElementById('medida-b-nuevo')?.value.trim();
+                    const medidaC = document.getElementById('medida-c-nuevo')?.value.trim();
+                    const numeroPieza = document.getElementById('numero-pieza-nuevo')?.value.trim();
                     
                     console.log('Datos del formulario:', { paqueteNumero, nombrePallet, tipo, proveedor, cantidad, unidad });
-                    
-                    if (!paqueteNumero || !tipo || !proveedor || !circunf || !espesor || !cantidad || !unidad) {
-                        this.mostrarNotificacion(t('complete_required_fields'), 'warning');
-                        return;
-                    }
 
                     const numeroAsignado = await this.obtenerProximoNumero();
                     
@@ -2087,6 +2117,14 @@
                         descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
                         if (longitud) descripcion += ` × ${longitud}`;
                         if (peso) descripcion += ` (${peso})`;
+                    }
+                    
+                    // Agregar medidas de codos a la descripción
+                    if (medidaA || medidaB || medidaC) {
+                        descripcion += ` [A:${medidaA || '-'} B:${medidaB || '-'} C:${medidaC || '-'}]`;
+                    }
+                    if (numeroPieza) {
+                        descripcion += ` #${numeroPieza}`;
                     }
 
                     // En modo online, guardar en Supabase
@@ -2097,7 +2135,7 @@
                                 numero: numeroAsignado,
                                 posicion_x: posX,
                                 posicion_y: posY,
-                                paquete_numero: paqueteNumero,
+                                paquete_numero: paqueteNumero || null,
                                 nombre_personalizado: nombrePallet || null
                             })
                             .select()
@@ -2110,8 +2148,8 @@
                             .insert({
                                 pallet_id: palletData.id,
                                 tipo: tipo,
-                                circunferencia: circunf,
-                                espesor: espesor,
+                                circunferencia: circunf || null,
+                                espesor: espesor || null,
                                 cantidad: cantidad,
                                 unidad: unidad,
                                 proveedor: proveedor,
@@ -2133,8 +2171,8 @@
                         materiales: [{
                             id: this.isOnline ? 'db_id' : 'local_' + Date.now(),
                             tipo: tipo,
-                            circunferencia: circunf,
-                            espesor: espesor,
+                            circunferencia: circunf || null,
+                            espesor: espesor || null,
                             cantidad: cantidad,
                             unidad: unidad,
                             proveedor: proveedor,
@@ -2163,19 +2201,20 @@
 
             async procesarAgregarMaterial() {
                 try {
-                    const tipo = document.getElementById('tipo-agregar').value;
-                    const proveedor = document.getElementById('proveedor-agregar').value;
-                    const circunf = document.getElementById('circunferencia-agregar').value;
-                    const espesor = document.getElementById('espesor-agregar').value;
-                    const longitud = document.getElementById('longitud-agregar').value;
-                    const peso = document.getElementById('peso-agregar').value;
-                    const cantidad = parseInt(document.getElementById('cantidad-agregar').value);
-                    const unidad = document.getElementById('unidad-agregar').value;
+                    const tipo = document.getElementById('tipo-agregar').value.trim() || 'Material';
+                    const proveedor = document.getElementById('proveedor-agregar').value.trim() || 'Sin especificar';
+                    const circunf = document.getElementById('circunferencia-agregar').value.trim();
+                    const espesor = document.getElementById('espesor-agregar').value.trim();
+                    const longitud = document.getElementById('longitud-agregar').value.trim();
+                    const peso = document.getElementById('peso-agregar').value.trim();
+                    const cantidad = parseInt(document.getElementById('cantidad-agregar').value) || 1;
+                    const unidad = document.getElementById('unidad-agregar').value || 'unidades';
                     
-                    if (!tipo || !proveedor || !cantidad || !unidad) {
-                        this.mostrarNotificacion(t('complete_required_fields'), 'warning');
-                        return;
-                    }
+                    // Obtener datos adicionales para codos
+                    const medidaA = document.getElementById('medida-a-agregar')?.value.trim();
+                    const medidaB = document.getElementById('medida-b-agregar')?.value.trim();
+                    const medidaC = document.getElementById('medida-c-agregar')?.value.trim();
+                    const numeroPieza = document.getElementById('numero-pieza-agregar')?.value.trim();
 
                     // En modo online, guardar en Supabase
                     if (this.isOnline && this.supabase) {
@@ -2200,8 +2239,8 @@
                             .insert({
                                 pallet_id: palletData.id,
                                 tipo: tipo,
-                                circunferencia: circunf,
-                                espesor: espesor,
+                                circunferencia: circunf || null,
+                                espesor: espesor || null,
                                 cantidad: cantidad,
                                 unidad: unidad,
                                 proveedor: proveedor,
@@ -2221,12 +2260,20 @@
                         if (longitud) descripcion += ` × ${longitud}`;
                         if (peso) descripcion += ` (${peso})`;
                     }
+                    
+                    // Agregar medidas de codos a la descripción
+                    if (medidaA || medidaB || medidaC) {
+                        descripcion += ` [A:${medidaA || '-'} B:${medidaB || '-'} C:${medidaC || '-'}]`;
+                    }
+                    if (numeroPieza) {
+                        descripcion += ` #${numeroPieza}`;
+                    }
 
                     this.inventario[this.palletActual].materiales.push({
                         id: 'local_' + Date.now(),
                         tipo: tipo,
-                        circunferencia: circunf,
-                        espesor: espesor,
+                        circunferencia: circunf || null,
+                        espesor: espesor || null,
                         cantidad: cantidad,
                         unidad: unidad,
                         proveedor: proveedor,
@@ -2465,8 +2512,22 @@
                 this.logInfo('Sincronización automática configurada');
             }
 
+            actualizarEstadisticas() {
+                const totalPallets = Object.keys(this.inventario).length;
+                const palletsOcupados = Object.keys(this.inventario).filter(id => this.inventario[id].total > 0).length;
+
+                const contadorTotal = document.getElementById('contador-pallets');
+                const contadorOcupados = document.getElementById('contador-ocupados');
+                
+                if (contadorTotal) contadorTotal.textContent = totalPallets;
+                if (contadorOcupados) contadorOcupados.textContent = palletsOcupados;
+
+                // Actualizar opciones de búsqueda cuando cambien las estadísticas
+                this.actualizarOpcionesBusqueda();
+            }
+
             buscarMateriales() {
-                const tipo = document.getElementById('search-tipo').value;
+                const tipo = document.getElementById('search-tipo').value.trim();
                 const circunf = document.getElementById('search-circunf').value.trim();
                 const espesor = document.getElementById('search-espesor').value.trim();
                 
@@ -2480,9 +2541,17 @@
                     pallet.materiales.forEach(material => {
                         let coincide = true;
                         
-                        if (tipo && material.tipo !== tipo) coincide = false;
-                        if (circunf && (!material.circunferencia || !material.circunferencia.includes(circunf))) coincide = false;
-                        if (espesor && (!material.espesor || !material.espesor.includes(espesor))) coincide = false;
+                        // Búsqueda más flexible para tipo
+                        if (tipo) {
+                            const tipoMaterial = (material.tipo || '').toLowerCase();
+                            const tipoBusqueda = tipo.toLowerCase();
+                            if (!tipoMaterial.includes(tipoBusqueda)) {
+                                coincide = false;
+                            }
+                        }
+                        
+                        if (circunf && (!material.circunferencia || !material.circunferencia.toString().includes(circunf))) coincide = false;
+                        if (espesor && (!material.espesor || !material.espesor.toString().includes(espesor))) coincide = false;
                         
                         if (coincide) {
                             materialesEncontrados.push({...material, palletId});
@@ -2525,18 +2594,132 @@
                 }
             }
 
-            actualizarEstadisticas() {
-                const totalPallets = Object.keys(this.inventario).length;
-                const palletsOcupados = Object.keys(this.inventario).filter(id => this.inventario[id].total > 0).length;
+            actualizarOpcionesBusqueda() {
+                const datalist = document.getElementById('search-material-types');
+                if (!datalist) return;
 
-                const contadorTotal = document.getElementById('contador-pallets');
-                const contadorOcupados = document.getElementById('contador-ocupados');
+                // Recopilar todos los tipos únicos de materiales existentes
+                const tiposUnicos = new Set();
                 
-                if (contadorTotal) contadorTotal.textContent = totalPallets;
-                if (contadorOcupados) contadorOcupados.textContent = palletsOcupados;
+                Object.keys(this.inventario).forEach(palletId => {
+                    const pallet = this.inventario[palletId];
+                    pallet.materiales.forEach(material => {
+                        if (material.tipo && material.tipo.trim()) {
+                            tiposUnicos.add(material.tipo.trim());
+                        }
+                    });
+                });
+
+                // Agregar opciones base en el idioma actual
+                const opcionesBase = [
+                    t('steel_sheet'),
+                    t('strap_band'), 
+                    t('elbow_90_deg'),
+                    t('elbow_45_deg'),
+                    t('pipe'),
+                    t('accessory'),
+                    t('other'),
+                    'Lamina',
+                    'Strap', 
+                    'Codo 90',
+                    'Codo 45',
+                    'Tuberia',
+                    'Accesorio',
+                    'Fleje',
+                    'Plancha',
+                    'Varilla',
+                    'Perfil',
+                    'Soldadura'
+                ];
+
+                opcionesBase.forEach(tipo => tiposUnicos.add(tipo));
+
+                // Limpiar datalist y agregar opciones actualizadas
+                datalist.innerHTML = '<option value=""></option>';
+                
+                // Convertir a array y ordenar alfabéticamente
+                const tiposOrdenados = Array.from(tiposUnicos).sort((a, b) => 
+                    a.toLowerCase().localeCompare(b.toLowerCase())
+                );
+
+                tiposOrdenados.forEach(tipo => {
+                    const option = document.createElement('option');
+                    option.value = tipo;
+                    datalist.appendChild(option);
+                });
+
+                this.logInfo('Opciones de búsqueda actualizadas: ' + tiposUnicos.size + ' tipos únicos');
             }
 
-            mostrarNotificacion(mensaje, tipo) {
+            toggleCamposCodos(tipo) {
+                const tipoInput = document.getElementById(`tipo-material-${tipo}`) || document.getElementById(`tipo-${tipo}`);
+                const camposCodos = document.getElementById(`campos-codos${tipo === 'nuevo' ? '' : '-' + tipo}`);
+                
+                if (tipoInput && camposCodos) {
+                    const valor = tipoInput.value.toLowerCase();
+                    const esCodo = valor.includes('codo') || valor.includes('elbow') || valor.includes('90') || valor.includes('45');
+                    camposCodos.style.display = esCodo ? 'block' : 'none';
+                }
+            }
+                try {
+                    const confirmText = currentLanguage === 'es' ? 
+                        '¿ESTÁS SEGURO? Esto eliminará TODOS los pallets y materiales permanentemente. Esta acción NO se puede deshacer.' :
+                        'ARE YOU SURE? This will permanently delete ALL pallets and materials. This action CANNOT be undone.';
+                    
+                    if (!confirm(confirmText)) {
+                        return;
+                    }
+
+                    if (this.isOnline && this.supabase) {
+                        // Eliminar todos los materiales primero
+                        const { error: materialesError } = await this.supabase
+                            .from('materiales')
+                            .delete()
+                            .neq('id', 0); // Eliminar todos los registros
+
+                        if (materialesError) throw materialesError;
+
+                        // Eliminar todos los pallets
+                        const { error: palletsError } = await this.supabase
+                            .from('pallets')
+                            .delete()
+                            .neq('numero', 0); // Eliminar todos los registros
+
+                        if (palletsError) throw palletsError;
+
+                        this.logInfo('Base de datos limpiada completamente');
+                    }
+
+                    // Limpiar inventario local
+                    this.inventario = {};
+                    
+                    // Limpiar warehouse visual
+                    const warehouse = document.getElementById('warehouse');
+                    if (warehouse) {
+                        warehouse.innerHTML = '';
+                    }
+
+                    // Actualizar estadísticas
+                    this.actualizarEstadisticas();
+                    
+                    // Cerrar modal si está abierto
+                    this.cerrarModal();
+
+                    const successMsg = currentLanguage === 'es' ? 
+                        'Sistema reseteado completamente. El próximo pallet será P1.' :
+                        'System completely reset. The next pallet will be P1.';
+                    
+                    this.mostrarNotificacion(successMsg, 'success');
+                    
+                } catch (error) {
+                    this.logError('Error reseteando sistema', error);
+                    const errorMsg = currentLanguage === 'es' ? 
+                        'Error al resetear el sistema: ' + error.message :
+                        'Error resetting system: ' + error.message;
+                    this.mostrarNotificacion(errorMsg, 'error');
+                }
+            }
+                    mostrarNotificacion(mensaje, tipo) {
                 console.log(`NOTIFICACIÓN ${tipo.toUpperCase()}: ${mensaje}`);
                 
                 // Crear notificación visual moderna
@@ -2565,9 +2748,6 @@
                     setTimeout(() => notif.remove(), 300);
                 }, 3000);
             }
-        }
-
-        // Inicialización automática con manejo robusto
         console.log('=== INICIALIZANDO WORKYARD MANAGER ENTERPRISE ===');
         
         function inicializarSistema() {
