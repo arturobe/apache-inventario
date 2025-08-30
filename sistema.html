@@ -1,4 +1,94 @@
-<!DOCTYPE html>
+configurarSistemaArrastre() {
+                const self = this;
+                
+                // Variables para detectar intención de arrastre vs scroll
+                let dragState = {
+                    startX: 0,
+                    startY: 0,
+                    startTime: 0,
+                    isIntentionalDrag: false,
+                    dragElement: null,
+                    dragThreshold: 15,
+                    timeThreshold: 300
+                };
+                
+                // Mouse events (solo para desktop)
+                document.addEventListener('mousemove', function(e) {
+                    if (self.arrastre.activo && dragState.isIntentionalDrag) {
+                        self.procesarMovimiento(e.clientX, e.clientY);
+                    }
+                });
+                
+                document.addEventListener('mouseup', function(e) {
+                    self.finalizarArrastre();
+                    dragState.isIntentionalDrag = false;
+                });
+                
+                // Touch events optimizados para no interferir con scroll
+                document.addEventListener('touchstart', function(e) {
+                    if (e.touches.length === 1) {
+                        const touch = e.touches[0];
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        
+                        // Solo inicializar si es un pallet no temporal
+                        if (element && element.classList.contains('pallet') && !element.classList.contains('temporal')) {
+                            dragState.startX = touch.clientX;
+                            dragState.startY = touch.clientY;
+                            dragState.startTime = Date.now();
+                            dragState.dragElement = element;
+                            dragState.isIntentionalDrag = false;
+                        }
+                    }
+                }, { passive: true });
+                
+                document.addEventListener('touchmove', function(e) {
+                    if (e.touches.length === 1 && dragState.dragElement) {
+                        const touch = e.touches[0];
+                        const deltaX = Math.abs(touch.clientX - dragState.startX);
+                        const deltaY = Math.abs(touch.clientY - dragState.startY);
+                        const timeDelta = Date.now() - dragState.startTime;
+                        
+                        // Solo activar arrastre con condiciones muy específicas:
+                        // 1. Ha pasado suficiente tiempo (para distinguir de scroll)
+                        // 2. Hay movimiento horizontal significativo
+                        // 3. El movimiento horizontal es mayor que el vertical (no es scroll vertical)
+                        if (!dragState.isIntentionalDrag && 
+                            timeDelta > dragState.timeThreshold && 
+                            deltaX > dragState.dragThreshold && 
+                            deltaX > deltaY * 1.5) {
+                            
+                            dragState.isIntentionalDrag = true;
+                            const palletId = dragState.dragElement.dataset.pallet;
+                            self.iniciarArrastre(dragState.dragElement, palletId, touch.clientX, touch.clientY);
+                        }
+                        
+                        // Solo prevenir default si ya estamos en modo arrastre
+                        if (dragState.isIntentionalDrag && self.arrastre.activo) {
+                            e.preventDefault();
+                            self.procesarMovimiento(touch.clientX, touch.clientY);
+                        }
+                        // En todos los otros casos, permitir scroll nativo
+                    }
+                }, { passive: false }); // Necesitamos passive: false para poder usar preventDefault
+                
+                document.addEventListener('touchend', function(e) {
+                    if (dragState.isIntentionalDrag) {
+                        self.finalizarArrastre();
+                    } else if (dragState.dragElement) {
+                        // Si no fue arrastre, tratar como click
+                        const palletId = dragState.dragElement.dataset.pallet;
+                        if (palletId && palletId !== 'temporal') {
+                            self.abrirModalGestion(palletId);
+                        }
+                    }
+                    
+                    // Resetear estado
+                    dragState.isIntentionalDrag = false;
+                    dragState.dragElement = null;
+                }, { passive: true });
+                
+                console.log('Sistema de arrastre configurado con scroll fluido optimizado');
+            }<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -35,6 +125,8 @@
             min-height: 200vh;
             margin: 0;
             padding: 0;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
         }
 
         .header {
@@ -123,6 +215,9 @@
             height: calc(100vh - 64px);
             overflow-y: auto;
             border-right: 1px solid var(--medium-grey);
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            scroll-behavior: smooth;
         }
 
         .sidebar-section {
@@ -235,6 +330,7 @@
             background-size: 50px 50px;
             background-position: 0 0, 25px 25px;
             overflow: visible;
+            touch-action: pan-x pan-y;
         }
 
         .pallet {
@@ -364,6 +460,9 @@
             padding: 0;
             overflow-y: auto;
             max-height: calc(90vh - 100px);
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            scroll-behavior: smooth;
         }
 
         .section-navigation {
@@ -405,6 +504,9 @@
         .section-content {
             padding: 30px;
             background: var(--white);
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            scroll-behavior: smooth;
         }
 
         .form-section {
@@ -640,6 +742,9 @@
             max-height: 200px;
             overflow-y: auto;
             border: 1px solid var(--medium-grey);
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            scroll-behavior: smooth;
         }
 
         @media (max-width: 1024px) {
@@ -1241,6 +1346,13 @@
             configurarSistemaArrastre() {
                 const self = this;
                 
+                // Variables para detectar intención de arrastre vs scroll
+                let touchStartX = 0;
+                let touchStartY = 0;
+                let touchStartTime = 0;
+                let isDragIntention = false;
+                
+                // Mouse events
                 document.addEventListener('mousemove', function(e) {
                     self.procesarMovimiento(e.clientX, e.clientY);
                 });
@@ -1249,19 +1361,51 @@
                     self.finalizarArrastre();
                 });
                 
-                document.addEventListener('touchmove', function(e) {
+                // Touch events mejorados para mejor compatibilidad con scroll
+                document.addEventListener('touchstart', function(e) {
                     if (e.touches.length === 1) {
-                        e.preventDefault();
                         const touch = e.touches[0];
-                        self.procesarMovimiento(touch.clientX, touch.clientY);
+                        touchStartX = touch.clientX;
+                        touchStartY = touch.clientY;
+                        touchStartTime = Date.now();
+                        isDragIntention = false;
+                        
+                        // Solo considerar arrastre si el touch es directamente sobre un pallet
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        if (element && element.classList.contains('pallet') && !element.classList.contains('temporal')) {
+                            // Pequeño delay para distinguir entre tap y drag
+                            setTimeout(() => {
+                                if (Date.now() - touchStartTime > 150) {
+                                    isDragIntention = true;
+                                }
+                            }, 150);
+                        }
                     }
+                }, { passive: true });
+                
+                document.addEventListener('touchmove', function(e) {
+                    if (e.touches.length === 1 && isDragIntention) {
+                        const touch = e.touches[0];
+                        const deltaX = Math.abs(touch.clientX - touchStartX);
+                        const deltaY = Math.abs(touch.clientY - touchStartY);
+                        const timeDelta = Date.now() - touchStartTime;
+                        
+                        // Solo activar arrastre si hay movimiento horizontal significativo
+                        // y el usuario ha mantenido presionado por suficiente tiempo
+                        if (timeDelta > 200 && deltaX > 10 && deltaX > deltaY) {
+                            e.preventDefault();
+                            self.procesarMovimiento(touch.clientX, touch.clientY);
+                        }
+                    }
+                    // Permitir scroll nativo en todos los otros casos
                 }, { passive: false });
                 
                 document.addEventListener('touchend', function(e) {
                     self.finalizarArrastre();
+                    isDragIntention = false;
                 });
                 
-                console.log('Sistema de arrastre configurado');
+                console.log('Sistema de arrastre configurado con scroll mejorado');
             }
 
             iniciarArrastre(elemento, palletId, clientX, clientY) {
@@ -1460,6 +1604,9 @@
                 pallet.style.left = safeX + 'px';
                 pallet.style.top = safeY + 'px';
                 
+                // Permitir scroll nativo sobre pallets
+                pallet.style.touchAction = 'auto';
+                
                 if (tipo !== 'temporal') {
                     pallet.title = 'Pallet P' + palletId + ' - ' + t('pallet_drag_manage');
                 } else {
@@ -1468,30 +1615,22 @@
 
                 const self = this;
                 
+                // Click handler simple
                 pallet.addEventListener('click', function(e) {
-                    if (!self.arrastre.activo) {
-                        e.preventDefault();
-                        if (tipo === 'temporal') {
-                            self.abrirModalCreacion(safeX, safeY);
-                        } else {
-                            self.abrirModalGestion(palletId);
-                        }
+                    e.preventDefault();
+                    if (tipo === 'temporal') {
+                        self.abrirModalCreacion(safeX, safeY);
+                    } else {
+                        self.abrirModalGestion(palletId);
                     }
                 });
 
+                // Drag handlers solo para desktop (mouse events)
                 if (tipo !== 'temporal') {
                     pallet.addEventListener('mousedown', function(e) {
                         e.preventDefault();
                         self.iniciarArrastre(pallet, palletId, e.clientX, e.clientY);
                     });
-                    
-                    pallet.addEventListener('touchstart', function(e) {
-                        e.preventDefault();
-                        if (e.touches.length === 1) {
-                            const touch = e.touches[0];
-                            self.iniciarArrastre(pallet, palletId, touch.clientX, touch.clientY);
-                        }
-                    }, { passive: false });
                 }
 
                 warehouse.appendChild(pallet);
@@ -1864,7 +2003,7 @@
                 return `
                     <div class="form-section">
                         <h4>${t('dispatch_material_from')}${this.palletActual}</h4>
-                        <div style="max-height: 500px; overflow-y: auto;">
+                        <div style="max-height: 500px; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; scroll-behavior: smooth;">
                             ${materialesHTML}
                         </div>
                         <div class="button-group">
