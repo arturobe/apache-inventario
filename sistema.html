@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Inventario Apache - Enterprise</title>
+    <title id="page-title">Sistema de Inventario Apache - Enterprise</title>
     <style>
         :root {
             --crimson: #C8102E;
@@ -78,13 +78,18 @@
             gap: 16px;
         }
 
-        .user-selector select {
+        .language-selector, .user-selector {
+            position: relative;
+        }
+
+        .language-selector select, .user-selector select {
             padding: 8px 12px;
             border-radius: 8px;
             background: var(--dark-grey);
             color: var(--white);
             border: 1px solid var(--medium-grey);
             font-size: 14px;
+            cursor: pointer;
         }
 
         .connection-status {
@@ -98,6 +103,11 @@
 
         .connected { 
             background: var(--crimson);
+            color: var(--white);
+        }
+
+        .disconnected {
+            background: var(--steel);
             color: var(--white);
         }
 
@@ -193,6 +203,7 @@
             cursor: pointer;
             transition: all 0.2s ease;
             margin-top: 8px;
+            width: 100%;
         }
 
         .btn-search {
@@ -686,6 +697,39 @@
                 height: 35px;
                 font-size: 12px;
             }
+
+            .user-controls {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .header {
+                height: auto;
+                padding: 12px 15px;
+            }
+
+            .header-brand {
+                gap: 12px;
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .header-logo {
+                height: 32px;
+            }
+        }
+
+        /* Animaciones para notificaciones */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
         }
     </style>
 </head>
@@ -693,69 +737,78 @@
     <div class="header">
         <div class="header-brand">
             <img src="https://www.apacheip.com/themes/custom/apache/images/apache-logo.png" alt="Apache Logo" class="header-logo">
-            <h1>Sistema de Inventario Apache</h1>
+            <h1 data-i18n="system_title">Sistema de Inventario Apache</h1>
         </div>
         <div class="user-controls">
-            <div class="user-selector">
-                <select id="usuario-selector" onchange="cambiarUsuario()">
-                    <option value="Usuario1">Usuario 1</option>
-                    <option value="Usuario2">Usuario 2</option>
-                    <option value="Usuario3">Usuario 3</option>
+            <div class="language-selector">
+                <select id="language-selector">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
                 </select>
             </div>
-            <div id="connection-status" class="connection-status connected">
-                Conectado
+            <div class="user-selector">
+                <select id="usuario-selector">
+                    <option value="Usuario1" data-i18n="user_1">Usuario 1</option>
+                    <option value="Usuario2" data-i18n="user_2">Usuario 2</option>
+                    <option value="Usuario3" data-i18n="user_3">Usuario 3</option>
+                </select>
+            </div>
+            <div id="connection-status" class="connection-status disconnected" data-i18n="demo_mode">
+                Modo Demo
             </div>
         </div>
     </div>
 
     <div class="main-container">
         <div class="sidebar">
-            <button class="create-pallet-btn" id="btn-crear-pallet">
+            <button class="create-pallet-btn" id="btn-crear-pallet" data-i18n="create_new_pallet">
                 + Crear Nuevo Pallet
             </button>
 
             <div class="sidebar-section">
-                <h3>Búsqueda de Materiales</h3>
+                <h3 data-i18n="material_search">Búsqueda de Materiales</h3>
                 <div class="search-grid">
                     <div class="form-field">
-                        <label>Tipo de Material</label>
+                        <label data-i18n="material_type">Tipo de Material</label>
                         <select id="search-tipo">
-                            <option value="">Todos los tipos</option>
-                            <option value="Lamina">Lámina</option>
-                            <option value="Strap">Strap</option>
-                            <option value="90">Codo 90°</option>
-                            <option value="45">Codo 45°</option>
+                            <option value="" data-i18n="all_types">Todos los tipos</option>
+                            <option value="Lamina" data-i18n="sheet">Lámina</option>
+                            <option value="Strap" data-i18n="strap">Strap</option>
+                            <option value="90" data-i18n="elbow_90">Codo 90°</option>
+                            <option value="45" data-i18n="elbow_45">Codo 45°</option>
+                            <option value="Tuberia" data-i18n="pipe">Tubería</option>
+                            <option value="Accesorio" data-i18n="accessory">Accesorio</option>
+                            <option value="Otro" data-i18n="other">Otro</option>
                         </select>
                     </div>
                     
                     <div class="form-field">
-                        <label>Circunferencia</label>
+                        <label data-i18n="circumference">Circunferencia</label>
                         <input type="text" id="search-circunf" placeholder="12">
                     </div>
                     
                     <div class="form-field">
-                        <label>Espesor</label>
+                        <label data-i18n="thickness">Espesor</label>
                         <input type="text" id="search-espesor" placeholder="1.5">
                     </div>
                 </div>
                 
-                <button class="btn-search" onclick="buscarMateriales()">Buscar Materiales</button>
-                <button class="btn-clear" onclick="limpiarBusqueda()">Limpiar Filtros</button>
+                <button class="btn-search" data-i18n="search_materials">Buscar Materiales</button>
+                <button class="btn-clear" data-i18n="clear_filters">Limpiar Filtros</button>
             </div>
 
             <div class="sidebar-section">
-                <h3>Estadísticas</h3>
+                <h3 data-i18n="statistics">Estadísticas</h3>
                 <div class="stats-grid">
-                    <div>Total pallets: <strong id="contador-pallets">0</strong></div>
-                    <div>Ocupados: <strong id="contador-ocupados">0</strong></div>
+                    <div><span data-i18n="total_pallets">Total pallets:</span> <strong id="contador-pallets">0</strong></div>
+                    <div><span data-i18n="occupied">Ocupados:</span> <strong id="contador-ocupados">0</strong></div>
                 </div>
             </div>
         </div>
 
         <div class="main-content">
             <div id="resultados-busqueda" class="search-results">
-                <h3 style="color: var(--onyx); margin-bottom: 16px;">Resultados de Búsqueda</h3>
+                <h3 data-i18n="search_results" style="color: var(--onyx); margin-bottom: 16px;">Resultados de Búsqueda</h3>
                 <div id="contenido-resultados"></div>
             </div>
 
@@ -766,18 +819,18 @@
     <div class="modal" id="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modal-title">Gestión de Pallet</h3>
-                <button class="modal-close" onclick="cerrarModal()">Cerrar</button>
+                <h3 id="modal-title" data-i18n="pallet_management">Gestión de Pallet</h3>
+                <button class="modal-close" data-i18n="close">Cerrar</button>
             </div>
             <div class="modal-body">
                 <div class="section-navigation" id="section-nav" style="display: none;">
-                    <button class="nav-tab active" onclick="inventorySystem.mostrarSeccion('inventario')">
+                    <button class="nav-tab active" data-i18n="view_inventory">
                         Ver Inventario
                     </button>
-                    <button class="nav-tab" onclick="inventorySystem.mostrarSeccion('agregar')">
+                    <button class="nav-tab" data-i18n="add_material">
                         Agregar Material
                     </button>
-                    <button class="nav-tab" onclick="inventorySystem.mostrarSeccion('despachar')">
+                    <button class="nav-tab" data-i18n="dispatch_material">
                         Despachar Material
                     </button>
                 </div>
@@ -789,8 +842,1704 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <script>
+        // Sistema de internacionalización completo
+        const i18n = {
+            es: {
+                // Títulos y navegación
+                system_title: 'Sistema de Inventario Apache',
+                page_title: 'Sistema de Inventario Apache - Enterprise',
+                connected: 'Conectado',
+                disconnected: 'Sin conexión',
+                demo_mode: 'Modo Demo',
+                user_1: 'Usuario 1',
+                user_2: 'Usuario 2', 
+                user_3: 'Usuario 3',
+                close: 'Cerrar',
+                
+                // Sidebar
+                create_new_pallet: '+ Crear Nuevo Pallet',
+                material_search: 'Búsqueda de Materiales',
+                material_type: 'Tipo de Material',
+                all_types: 'Todos los tipos',
+                sheet: 'Lámina',
+                strap: 'Strap',
+                elbow_90: 'Codo 90°',
+                elbow_45: 'Codo 45°',
+                pipe: 'Tubería',
+                accessory: 'Accesorio',
+                other: 'Otro',
+                circumference: 'Circunferencia',
+                thickness: 'Espesor',
+                search_materials: 'Buscar Materiales',
+                clear_filters: 'Limpiar Filtros',
+                statistics: 'Estadísticas',
+                total_pallets: 'Total pallets:',
+                occupied: 'Ocupados:',
+                search_results: 'Resultados de Búsqueda',
+                
+                // Modal y navegación de pestañas
+                pallet_management: 'Gestión de Pallet',
+                view_inventory: 'Ver Inventario',
+                add_material: 'Agregar Material',
+                dispatch_material: 'Despachar Material',
+                
+                // Formularios - Creación
+                create_new_pallet_title: 'Crear Nuevo Pallet',
+                pallet_info: 'Información del Pallet',
+                package_number: 'Paquete #',
+                custom_pallet_name: 'Nombre del Pallet',
+                custom_name_placeholder: 'Nombre personalizado (opcional)',
+                material_info: 'Información del Material',
+                technical_specs: 'Especificaciones Técnicas',
+                quantity_measures: 'Cantidad y Medidas',
+                select_type: 'Seleccionar tipo...',
+                steel_sheet: 'Lámina de Acero',
+                strap_band: 'Strap/Fleje',
+                elbow_90_deg: 'Codo 90°',
+                elbow_45_deg: 'Codo 45°',
+                supplier: 'Proveedor',
+                supplier_name: 'Nombre del proveedor',
+                length: 'Longitud',
+                weight: 'Peso',
+                weight_optional: 'Peso (opcional)',
+                quantity_received: 'Cantidad Recibida',
+                unit_measure: 'Unidad de Medida',
+                linear_feet: 'Pies Lineales',
+                pieces: 'Piezas',
+                meters: 'Metros',
+                kilograms: 'Kilogramos',
+                tons: 'Toneladas',
+                create_pallet: 'Crear Pallet',
+                cancel: 'Cancelar',
+                
+                // Inventario
+                current_inventory: 'Inventario Actual',
+                total_units_pallet: 'UNIDADES TOTALES EN PALLET',
+                specifications: 'Especificaciones:',
+                supplier_label: 'Proveedor:',
+                received: 'Recibido:',
+                not_specified: 'No especificado',
+                units: 'unidades',
+                
+                // Agregar material
+                add_material_to_pallet: 'Agregar Material al Pallet P',
+                quantity_to_add: 'Cantidad a Agregar',
+                add_material_btn: 'Agregar Material',
+                
+                // Despacho
+                dispatch_material_from: 'Despachar Material del Pallet P',
+                available_stock: 'Stock disponible:',
+                quantity_to_dispatch: 'Cantidad a despachar:',
+                available_units: 'disponibles',
+                confirm_selective_dispatch: 'Confirmar Despacho Selectivo',
+                dispatch_entire_pallet: 'Despachar Todo el Pallet',
+                stock: 'Stock:',
+                
+                // Gestión de pallets
+                edit_pallet_name: 'Editar Nombre',
+                rename_pallet: 'Renombrar Pallet',
+                update_name: 'Actualizar Nombre',
+                pallet_name_updated: 'Nombre del pallet actualizado',
+                
+                // Mensajes del sistema
+                complete_required_fields: 'Completa todos los campos obligatorios',
+                pallet_created_success: 'creado exitosamente',
+                error_creating_pallet: 'Error al crear el pallet:',
+                connection_error: 'Error de conexión:',
+                material_added_success: 'Material agregado exitosamente',
+                error_adding_material: 'Error al agregar material:',
+                dispatch_success: 'Material despachado exitosamente',
+                error_dispatching: 'Error al despachar material:',
+                pallet_dispatched_complete: 'Pallet despachado completamente',
+                pallet_renamed_success: 'Pallet renombrado exitosamente',
+                error_renaming_pallet: 'Error al renombrar pallet:',
+                
+                // Tooltips y ayuda
+                new_pallet_click: 'Nuevo pallet - Click para cargar material',
+                pallet_drag_manage: 'Arrastra para mover o click para gestionar',
+                
+                // Fechas y tiempo
+                at: 'a las',
+                
+                // Estados
+                active: 'Activo',
+                inactive: 'Inactivo'
+            },
+            en: {
+                // Titles and navigation
+                system_title: 'Apache Inventory System',
+                page_title: 'Apache Inventory System - Enterprise',
+                connected: 'Connected',
+                disconnected: 'Disconnected',
+                demo_mode: 'Demo Mode',
+                user_1: 'User 1',
+                user_2: 'User 2',
+                user_3: 'User 3',
+                close: 'Close',
+                
+                // Sidebar
+                create_new_pallet: '+ Create New Pallet',
+                material_search: 'Material Search',
+                material_type: 'Material Type',
+                all_types: 'All types',
+                sheet: 'Sheet',
+                strap: 'Strap',
+                elbow_90: '90° Elbow',
+                elbow_45: '45° Elbow',
+                pipe: 'Pipe',
+                accessory: 'Accessory',
+                other: 'Other',
+                circumference: 'Circumference',
+                thickness: 'Thickness',
+                search_materials: 'Search Materials',
+                clear_filters: 'Clear Filters',
+                statistics: 'Statistics',
+                total_pallets: 'Total pallets:',
+                occupied: 'Occupied:',
+                search_results: 'Search Results',
+                
+                // Modal and tab navigation
+                pallet_management: 'Pallet Management',
+                view_inventory: 'View Inventory',
+                add_material: 'Add Material',
+                dispatch_material: 'Dispatch Material',
+                
+                // Forms - Creation
+                create_new_pallet_title: 'Create New Pallet',
+                pallet_info: 'Pallet Information',
+                package_number: 'Package #',
+                custom_pallet_name: 'Pallet Name',
+                custom_name_placeholder: 'Custom name (optional)',
+                material_info: 'Material Information',
+                technical_specs: 'Technical Specifications',
+                quantity_measures: 'Quantity and Measurements',
+                select_type: 'Select type...',
+                steel_sheet: 'Steel Sheet',
+                strap_band: 'Strap/Band',
+                elbow_90_deg: '90° Elbow',
+                elbow_45_deg: '45° Elbow',
+                supplier: 'Supplier',
+                supplier_name: 'Supplier name',
+                length: 'Length',
+                weight: 'Weight',
+                weight_optional: 'Weight (optional)',
+                quantity_received: 'Quantity Received',
+                unit_measure: 'Unit of Measure',
+                linear_feet: 'Linear Feet',
+                pieces: 'Pieces',
+                meters: 'Meters',
+                kilograms: 'Kilograms',
+                tons: 'Tons',
+                create_pallet: 'Create Pallet',
+                cancel: 'Cancel',
+                
+                // Inventory
+                current_inventory: 'Current Inventory',
+                total_units_pallet: 'TOTAL UNITS IN PALLET',
+                specifications: 'Specifications:',
+                supplier_label: 'Supplier:',
+                received: 'Received:',
+                not_specified: 'Not specified',
+                units: 'units',
+                
+                // Add material
+                add_material_to_pallet: 'Add Material to Pallet P',
+                quantity_to_add: 'Quantity to Add',
+                add_material_btn: 'Add Material',
+                
+                // Dispatch
+                dispatch_material_from: 'Dispatch Material from Pallet P',
+                available_stock: 'Available stock:',
+                quantity_to_dispatch: 'Quantity to dispatch:',
+                available_units: 'available',
+                confirm_selective_dispatch: 'Confirm Selective Dispatch',
+                dispatch_entire_pallet: 'Dispatch Entire Pallet',
+                stock: 'Stock:',
+                
+                // Pallet management
+                edit_pallet_name: 'Edit Name',
+                rename_pallet: 'Rename Pallet',
+                update_name: 'Update Name',
+                pallet_name_updated: 'Pallet name updated',
+                
+                // System messages
+                complete_required_fields: 'Complete all required fields',
+                pallet_created_success: 'created successfully',
+                error_creating_pallet: 'Error creating pallet:',
+                connection_error: 'Connection error:',
+                material_added_success: 'Material added successfully',
+                error_adding_material: 'Error adding material:',
+                dispatch_success: 'Material dispatched successfully',
+                error_dispatching: 'Error dispatching material:',
+                pallet_dispatched_complete: 'Pallet completely dispatched',
+                pallet_renamed_success: 'Pallet renamed successfully',
+                error_renaming_pallet: 'Error renaming pallet:',
+                
+                // Tooltips and help
+                new_pallet_click: 'New pallet - Click to load material',
+                pallet_drag_manage: 'Drag to move or click to manage',
+                
+                // Dates and time
+                at: 'at',
+                
+                // States
+                active: 'Active',
+                inactive: 'Inactive'
+            }
+        };
+
+        let currentLanguage = 'es';
+
+        function changeLanguage() {
+            const selector = document.getElementById('language-selector');
+            currentLanguage = selector.value;
+            
+            // Actualizar HTML lang
+            document.documentElement.lang = currentLanguage;
+            
+            // Actualizar título de página
+            document.title = i18n[currentLanguage].page_title;
+            
+            // Actualizar todos los elementos con data-i18n
+            const elements = document.querySelectorAll('[data-i18n]');
+            elements.forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (i18n[currentLanguage][key]) {
+                    if (element.tagName === 'INPUT' && element.type === 'text') {
+                        element.placeholder = i18n[currentLanguage][key];
+                    } else {
+                        element.textContent = i18n[currentLanguage][key];
+                    }
+                }
+            });
+
+            // Actualizar select options
+            updateSelectOptions();
+            
+            // Re-renderizar modal si está abierto
+            if (window.inventorySystem && window.inventorySystem.palletActual) {
+                window.inventorySystem.actualizarNavegacionModal(window.inventorySystem.palletActual);
+                window.inventorySystem.mostrarSeccion(window.inventorySystem.seccionActiva);
+            }
+
+            console.log('Language changed to:', currentLanguage);
+        }
+
+        function updateSelectOptions() {
+            // Actualizar opciones del selector de tipo de material en búsqueda
+            const searchTipo = document.getElementById('search-tipo');
+            if (searchTipo) {
+                const options = searchTipo.querySelectorAll('option');
+                options.forEach(option => {
+                    const key = option.getAttribute('data-i18n');
+                    if (key && i18n[currentLanguage][key]) {
+                        option.textContent = i18n[currentLanguage][key];
+                    }
+                });
+            }
+
+            // Actualizar opciones de usuario
+            const userOptions = document.querySelectorAll('#usuario-selector option');
+            userOptions.forEach(option => {
+                const key = option.getAttribute('data-i18n');
+                if (key && i18n[currentLanguage][key]) {
+                    option.textContent = i18n[currentLanguage][key];
+                }
+            });
+        }
+
+        function t(key) {
+            return i18n[currentLanguage][key] || key;
+        }
+
         console.log('=== SISTEMA APACHE INVENTARIO ENTERPRISE ===');
         
         const CONFIG = {
             SUPABASE_URL: 'https://iuewoscogzfikwtzjjud.supabase.co',
-            SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1ZXdvc2NvZ3pmaWt3dHpqanVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNDQ4NTUsImV4cCI6MjA3MTkyMDg1NX0.WwNqp_zYz2EUqO
+            SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1ZXdvc2NvZ3pmaWt3dHpqanVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzNDQ4NTUsImV4cCI6MjA3MTkyMDg1NX0.WwNqp_zYz2EUqOcvpbsoT42bihKSMM6pmxWe3nJiy1Y',
+            POLLING_INTERVAL: 10000,
+            PALLET_SIZE: 40
+        };
+
+        class InventorySystem {
+            constructor() {
+                this.inventario = {};
+                this.palletActual = null;
+                this.usuarioActual = 'Usuario1';
+                this.isOnline = false;
+                this.pollingInterval = null;
+                this.ultimaVerificacion = new Date().toISOString();
+                this.ultimoPalletId = 0;
+                this.supabase = null;
+                this.seccionActiva = 'inventario';
+                
+                this.arrastre = {
+                    activo: false,
+                    palletId: null,
+                    elemento: null,
+                    offsetX: 0,
+                    offsetY: 0,
+                    posicionInicial: { x: 0, y: 0 }
+                };
+                
+                this.logInfo('Sistema enterprise inicializado');
+            }
+
+            logInfo(mensaje) {
+                const timestamp = new Date().toISOString();
+                console.log(`[${timestamp}] INFO: ${mensaje}`);
+            }
+
+            logError(mensaje, error) {
+                const timestamp = new Date().toISOString();
+                console.error(`[${timestamp}] ERROR: ${mensaje}`, error);
+            }
+
+            async init() {
+                try {
+                    this.logInfo('Inicializando sistema enterprise...');
+                    await this.conectarSupabase();
+                    await this.cargarInventarioDesdeDB();
+                    this.configurarEventListeners();
+                    this.configurarSistemaArrastre();
+                    this.configurarSincronizacion();
+                    this.actualizarEstadisticas();
+                    this.logInfo('Sistema enterprise completamente inicializado');
+                } catch (error) {
+                    this.logError('Error crítico en inicialización', error);
+                    this.mostrarNotificacion(t('connection_error') + ' ' + error.message, 'error');
+                }
+            }
+
+            async conectarSupabase() {
+                try {
+                    this.logInfo('Conectando a Supabase...');
+                    
+                    if (!window.supabase) {
+                        throw new Error('Supabase SDK no disponible');
+                    }
+                    
+                    this.supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+                    
+                    const { data, error, count } = await this.supabase
+                        .from('pallets')
+                        .select('*', { count: 'exact', head: true });
+
+                    if (error) throw error;
+                    
+                    this.isOnline = true;
+                    this.actualizarEstadoConexion('connected');
+                    this.logInfo('Conectado exitosamente - ' + (count || 0) + ' pallets en base de datos');
+                    
+                } catch (error) {
+                    this.logError('Error de conexión - activando modo offline', error);
+                    this.isOnline = false;
+                    this.actualizarEstadoConexion('demo_mode');
+                    this.mostrarNotificacion('Modo offline activado - funcionalidad limitada', 'warning');
+                    
+                    // Activar modo demo con datos de ejemplo
+                    this.activarModoDemo();
+                }
+            }
+
+            activarModoDemo() {
+                this.logInfo('Activando modo demo...');
+                
+                // Crear algunos pallets de ejemplo
+                this.inventario = {
+                    '1': {
+                        materiales: [{
+                            id: 'demo1',
+                            tipo: 'Lamina',
+                            circunferencia: '12',
+                            espesor: '1.5',
+                            cantidad: 150,
+                            unidad: 'pies lineales',
+                            proveedor: 'Proveedor Demo',
+                            descripcion: 'Lámina - 12″ ⌀ × 1.5″',
+                            fecha: new Date().toISOString()
+                        }],
+                        total: 150,
+                        created: new Date().toISOString(),
+                        posicion: { x: 100, y: 100 },
+                        paqueteNumero: 'PAQ-001',
+                        nombrePersonalizado: 'Láminas Norte'
+                    },
+                    '2': {
+                        materiales: [{
+                            id: 'demo2',
+                            tipo: 'Strap',
+                            circunferencia: '8',
+                            espesor: '2',
+                            cantidad: 75,
+                            unidad: 'piezas',
+                            proveedor: 'Proveedor Demo 2',
+                            descripcion: 'Strap - 8″ ⌀ × 2″',
+                            fecha: new Date().toISOString()
+                        }],
+                        total: 75,
+                        created: new Date().toISOString(),
+                        posicion: { x: 200, y: 150 },
+                        paqueteNumero: 'PAQ-002',
+                        nombrePersonalizado: null
+                    }
+                };
+                
+                this.renderizarPalletsVisuales();
+                this.actualizarEstadisticas();
+                this.logInfo('Modo demo activado con pallets de ejemplo');
+            }
+
+            configurarEventListeners() {
+                const btnCrear = document.getElementById('btn-crear-pallet');
+                const languageSelector = document.getElementById('language-selector');
+                const userSelector = document.getElementById('usuario-selector');
+                const searchBtn = document.querySelector('.btn-search');
+                const clearBtn = document.querySelector('.btn-clear');
+                const modalClose = document.querySelector('.modal-close');
+                
+                if (btnCrear) {
+                    btnCrear.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        console.log('Botón crear pallet clickeado');
+                        this.logInfo('Iniciando creación de nuevo pallet');
+                        this.crearNuevoPallet();
+                    });
+                }
+                
+                if (languageSelector) {
+                    languageSelector.addEventListener('change', changeLanguage);
+                }
+                
+                if (userSelector) {
+                    userSelector.addEventListener('change', () => {
+                        this.usuarioActual = userSelector.value;
+                        this.logInfo('Usuario cambiado a: ' + userSelector.value);
+                    });
+                }
+                
+                if (searchBtn) {
+                    searchBtn.addEventListener('click', () => this.buscarMateriales());
+                }
+                
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', () => this.limpiarBusqueda());
+                }
+                
+                if (modalClose) {
+                    modalClose.addEventListener('click', () => this.cerrarModal());
+                }
+                
+                this.logInfo('Event listeners configurados correctamente');
+            }
+
+            configurarSistemaArrastre() {
+                const self = this;
+                
+                // Mouse events
+                document.addEventListener('mousemove', function(e) {
+                    self.procesarMovimiento(e.clientX, e.clientY);
+                });
+                
+                document.addEventListener('mouseup', function(e) {
+                    self.finalizarArrastre();
+                });
+                
+                // Touch events
+                document.addEventListener('touchmove', function(e) {
+                    if (e.touches.length === 1) {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        self.procesarMovimiento(touch.clientX, touch.clientY);
+                    }
+                }, { passive: false });
+                
+                document.addEventListener('touchend', function(e) {
+                    self.finalizarArrastre();
+                });
+                
+                this.logInfo('Sistema de arrastre configurado');
+            }
+
+            iniciarArrastre(elemento, palletId, clientX, clientY) {
+                if (palletId === 'temporal') return false;
+                
+                const warehouse = document.getElementById('warehouse');
+                const warehouseRect = warehouse.getBoundingClientRect();
+                const elementRect = elemento.getBoundingClientRect();
+                
+                this.arrastre = {
+                    activo: true,
+                    palletId: palletId,
+                    elemento: elemento,
+                    offsetX: clientX - elementRect.left,
+                    offsetY: clientY - elementRect.top,
+                    posicionInicial: {
+                        x: elementRect.left - warehouseRect.left,
+                        y: elementRect.top - warehouseRect.top
+                    }
+                };
+                
+                elemento.classList.add('dragging');
+                document.body.style.cursor = 'grabbing';
+                
+                this.logInfo('Arrastre iniciado para pallet P' + palletId);
+                return true;
+            }
+
+            procesarMovimiento(clientX, clientY) {
+                if (!this.arrastre.activo) return;
+                
+                const warehouse = document.getElementById('warehouse');
+                const warehouseRect = warehouse.getBoundingClientRect();
+                
+                const newX = clientX - warehouseRect.left - this.arrastre.offsetX;
+                const newY = clientY - warehouseRect.top - this.arrastre.offsetY;
+                
+                const limitedX = Math.max(0, Math.min(newX, warehouseRect.width - 40));
+                const limitedY = Math.max(0, Math.min(newY, warehouseRect.height - 40));
+                
+                this.arrastre.elemento.style.left = limitedX + 'px';
+                this.arrastre.elemento.style.top = limitedY + 'px';
+            }
+
+            async finalizarArrastre() {
+                if (!this.arrastre.activo) return;
+                
+                try {
+                    this.arrastre.elemento.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    
+                    const posicionFinal = {
+                        x: parseInt(this.arrastre.elemento.style.left),
+                        y: parseInt(this.arrastre.elemento.style.top)
+                    };
+                    
+                    const distancia = Math.sqrt(
+                        Math.pow(posicionFinal.x - this.arrastre.posicionInicial.x, 2) +
+                        Math.pow(posicionFinal.y - this.arrastre.posicionInicial.y, 2)
+                    );
+                    
+                    if (distancia > 15) {
+                        await this.guardarPosicionPallet(this.arrastre.palletId, posicionFinal.x, posicionFinal.y);
+                        this.logInfo('Pallet P' + this.arrastre.palletId + ' reubicado a (' + posicionFinal.x + ', ' + posicionFinal.y + ')');
+                    } else {
+                        this.abrirModalGestion(this.arrastre.palletId);
+                    }
+                    
+                } catch (error) {
+                    this.logError('Error finalizando arrastre', error);
+                } finally {
+                    this.arrastre.activo = false;
+                    this.arrastre.palletId = null;
+                    this.arrastre.elemento = null;
+                }
+            }
+
+            async guardarPosicionPallet(palletId, x, y) {
+                try {
+                    if (!this.supabase || !this.isOnline) {
+                        // Modo offline - actualizar solo localmente
+                        if (this.inventario[palletId]) {
+                            this.inventario[palletId].posicion = { x: Math.round(x), y: Math.round(y) };
+                        }
+                        return;
+                    }
+                    
+                    const { error } = await this.supabase
+                        .from('pallets')
+                        .update({
+                            posicion_x: Math.round(x),
+                            posicion_y: Math.round(y)
+                        })
+                        .eq('numero', parseInt(palletId));
+                    
+                    if (error) throw error;
+                    
+                    if (this.inventario[palletId]) {
+                        this.inventario[palletId].posicion = { x: Math.round(x), y: Math.round(y) };
+                    }
+                    
+                } catch (error) {
+                    this.logError('Error guardando posición', error);
+                }
+            }
+
+            async cargarInventarioDesdeDB() {
+                try {
+                    if (!this.supabase || !this.isOnline) return;
+
+                    const { data: materiales, error } = await this.supabase
+                        .from('materiales')
+                        .select('*, pallets!inner (numero, posicion_x, posicion_y, created_at, paquete_numero, nombre_personalizado)')
+                        .eq('activo', true)
+                        .order('fecha_recepcion', { ascending: false });
+
+                    if (error) throw error;
+
+                    this.inventario = {};
+
+                    if (materiales && materiales.length > 0) {
+                        const palletsMap = new Map();
+                        
+                        materiales.forEach(material => {
+                            const palletNum = material.pallets.numero;
+                            
+                            if (!palletsMap.has(palletNum)) {
+                                palletsMap.set(palletNum, {
+                                    materiales: [],
+                                    total: 0,
+                                    created: material.pallets.created_at,
+                                    posicion: {
+                                        x: material.pallets.posicion_x || 50,
+                                        y: material.pallets.posicion_y || 50
+                                    },
+                                    paqueteNumero: material.pallets.paquete_numero,
+                                    nombrePersonalizado: material.pallets.nombre_personalizado
+                                });
+                            }
+
+                            palletsMap.get(palletNum).materiales.push({
+                                id: material.id,
+                                tipo: material.tipo,
+                                circunferencia: material.circunferencia,
+                                espesor: material.espesor,
+                                descripcion: material.descripcion_completa,
+                                cantidad: material.cantidad,
+                                unidad: material.unidad,
+                                proveedor: material.proveedor,
+                                fecha: material.fecha_recepcion
+                            });
+                        });
+
+                        palletsMap.forEach((data, palletNum) => {
+                            data.total = data.materiales.reduce((sum, m) => sum + m.cantidad, 0);
+                            this.inventario[palletNum] = data;
+                        });
+                    }
+
+                    this.renderizarPalletsVisuales();
+                    this.logInfo('Inventario cargado: ' + (materiales?.length || 0) + ' materiales');
+
+                } catch (error) {
+                    this.logError('Error cargando inventario', error);
+                }
+            }
+
+            renderizarPalletsVisuales() {
+                const warehouse = document.getElementById('warehouse');
+                if (!warehouse) return;
+
+                warehouse.innerHTML = '';
+                const self = this;
+
+                Object.keys(this.inventario).forEach(function(palletId) {
+                    const datos = self.inventario[palletId];
+                    if (datos.total > 0) {
+                        self.crearPalletVisual(palletId, datos.posicion.x, datos.posicion.y, 'occupied');
+                    }
+                });
+
+                this.logInfo('Pallets renderizados: ' + Object.keys(this.inventario).length);
+            }
+
+            crearPalletVisual(palletId, x, y, tipo) {
+                const warehouse = document.getElementById('warehouse');
+                const warehouseRect = warehouse.getBoundingClientRect();
+                
+                const safeX = Math.max(10, Math.min(x, warehouseRect.width - 50));
+                const safeY = Math.max(10, Math.min(y, warehouseRect.height - 50));
+
+                const pallet = document.createElement('div');
+                pallet.className = 'pallet ' + tipo;
+                pallet.dataset.pallet = palletId;
+                pallet.textContent = tipo === 'temporal' ? '?' : palletId;
+                pallet.style.left = safeX + 'px';
+                pallet.style.top = safeY + 'px';
+                
+                if (tipo !== 'temporal') {
+                    pallet.title = 'Pallet P' + palletId + ' - ' + t('pallet_drag_manage');
+                } else {
+                    pallet.title = t('new_pallet_click');
+                }
+
+                const self = this;
+                
+                // Click handler
+                pallet.addEventListener('click', function(e) {
+                    if (!self.arrastre.activo) {
+                        e.preventDefault();
+                        if (tipo === 'temporal') {
+                            self.abrirModalCreacion(safeX, safeY);
+                        } else {
+                            self.abrirModalGestion(palletId);
+                        }
+                    }
+                });
+
+                // Drag handlers solo para pallets definitivos
+                if (tipo !== 'temporal') {
+                    pallet.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        self.iniciarArrastre(pallet, palletId, e.clientX, e.clientY);
+                    });
+                    
+                    pallet.addEventListener('touchstart', function(e) {
+                        e.preventDefault();
+                        if (e.touches.length === 1) {
+                            const touch = e.touches[0];
+                            self.iniciarArrastre(pallet, palletId, touch.clientX, touch.clientY);
+                        }
+                    }, { passive: false });
+                }
+
+                warehouse.appendChild(pallet);
+                return pallet;
+            }
+
+            async crearNuevoPallet() {
+                try {
+                    console.log('Ejecutando crearNuevoPallet...');
+                    const warehouse = document.getElementById('warehouse');
+                    const warehouseRect = warehouse.getBoundingClientRect();
+                    
+                    const centroX = (warehouseRect.width / 2) - 20;
+                    const centroY = (warehouseRect.height / 3) - 20;
+
+                    console.log('Creando pallet temporal en:', centroX, centroY);
+                    this.crearPalletVisual('temporal', centroX, centroY, 'temporal');
+                    
+                    setTimeout(() => {
+                        console.log('Abriendo modal de creación...');
+                        this.abrirModalCreacion(centroX, centroY);
+                    }, 200);
+                    
+                } catch (error) {
+                    this.logError('Error creando pallet', error);
+                    this.mostrarNotificacion('Error al crear pallet temporal', 'error');
+                }
+            }
+
+            abrirModalCreacion(posX, posY) {
+                console.log('Abriendo modal de creación...');
+                const modal = document.getElementById('modal');
+                const title = document.getElementById('modal-title');
+                const content = document.getElementById('modal-content');
+                const nav = document.getElementById('section-nav');
+                
+                title.textContent = t('create_new_pallet_title');
+                nav.style.display = 'none';
+                
+                content.innerHTML = this.generarFormularioCreacion(posX, posY);
+                modal.classList.add('active');
+                console.log('Modal de creación abierto');
+            }
+
+            generarFormularioCreacion(posX, posY) {
+                return `
+                    <div class="form-section">
+                        <h4>${t('pallet_info')}</h4>
+                        <div class="form-grid cols-2">
+                            <div class="form-group">
+                                <label>${t('package_number')}</label>
+                                <input type="text" id="paquete-numero-nuevo" placeholder="PAQ-001" required>
+                            </div>
+                            <div class="form-group">
+                                <label>${t('custom_pallet_name')}</label>
+                                <input type="text" id="nombre-pallet-nuevo" placeholder="${t('custom_name_placeholder')}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>${t('material_info')}</h4>
+                        <div class="form-grid cols-2">
+                            <div class="form-group">
+                                <label>${t('material_type')}</label>
+                                <select id="tipo-material-nuevo" required>
+                                    <option value="">${t('select_type')}</option>
+                                    <option value="Lamina">${t('steel_sheet')}</option>
+                                    <option value="Strap">${t('strap_band')}</option>
+                                    <option value="Codo 90">${t('elbow_90_deg')}</option>
+                                    <option value="Codo 45">${t('elbow_45_deg')}</option>
+                                    <option value="Tuberia">${t('pipe')}</option>
+                                    <option value="Accesorio">${t('accessory')}</option>
+                                    <option value="Otro">${t('other')}</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>${t('supplier')}</label>
+                                <input type="text" id="proveedor-nuevo" placeholder="${t('supplier_name')}" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>${t('technical_specs')}</h4>
+                        <div class="form-grid cols-4">
+                            <div class="form-group">
+                                <label>${t('circumference')}</label>
+                                <input type="text" id="circunferencia-nuevo" placeholder="12.0&quot;" required>
+                            </div>
+                            <div class="form-group">
+                                <label>${t('thickness')}</label>
+                                <input type="text" id="espesor-nuevo" placeholder="1.5&quot;" required>
+                            </div>
+                            <div class="form-group">
+                                <label>${t('length')}</label>
+                                <input type="text" id="longitud-nuevo" placeholder="20 ${currentLanguage === 'es' ? 'pies' : 'feet'}">
+                            </div>
+                            <div class="form-group">
+                                <label>${t('weight_optional')}</label>
+                                <input type="text" id="peso-nuevo" placeholder="500 kg">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>${t('quantity_measures')}</h4>
+                        <div class="form-grid cols-2">
+                            <div class="form-group">
+                                <label>${t('quantity_received')}</label>
+                                <input type="number" id="cantidad-nuevo" placeholder="100" required min="1" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label>${t('unit_measure')}</label>
+                                <select id="unidad-nuevo" required>
+                                    <option value="pies lineales">${t('linear_feet')}</option>
+                                    <option value="piezas">${t('pieces')}</option>
+                                    <option value="metros">${t('meters')}</option>
+                                    <option value="kilogramos">${t('kilograms')}</option>
+                                    <option value="toneladas">${t('tons')}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="action-button success" onclick="inventorySystem.procesarCreacionPallet(${posX}, ${posY})">
+                            ${t('create_pallet')}
+                        </button>
+                        <button class="action-button secondary" onclick="inventorySystem.cancelarCreacion()">
+                            ${t('cancel')}
+                        </button>
+                    </div>
+                `;
+            }
+
+            abrirModalGestion(palletId) {
+                const modal = document.getElementById('modal');
+                const title = document.getElementById('modal-title');
+                const content = document.getElementById('modal-content');
+                const nav = document.getElementById('section-nav');
+                
+                this.palletActual = palletId;
+                title.textContent = t('pallet_management') + ' P' + palletId;
+                nav.style.display = 'flex';
+                
+                this.actualizarNavegacionModal(palletId);
+                this.mostrarSeccion('inventario');
+                
+                modal.classList.add('active');
+            }
+
+            actualizarNavegacionModal(palletId) {
+                const datos = this.inventario[palletId];
+                const tabs = document.querySelectorAll('.nav-tab');
+                
+                tabs[0].textContent = t('view_inventory') + ' (' + datos.total + ')';
+                tabs[1].textContent = t('add_material');
+                tabs[2].textContent = t('dispatch_material');
+                
+                // Actualizar onclick handlers
+                tabs[0].onclick = () => this.mostrarSeccion('inventario');
+                tabs[1].onclick = () => this.mostrarSeccion('agregar');
+                tabs[2].onclick = () => this.mostrarSeccion('despachar');
+            }
+
+            mostrarSeccion(seccion) {
+                this.seccionActiva = seccion;
+                
+                // Actualizar tabs activos
+                document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+                
+                const content = document.getElementById('modal-content');
+                const datos = this.inventario[this.palletActual];
+                
+                switch(seccion) {
+                    case 'inventario':
+                        document.querySelectorAll('.nav-tab')[0].classList.add('active');
+                        content.innerHTML = this.generarVistaInventario(datos);
+                        break;
+                    case 'agregar':
+                        document.querySelectorAll('.nav-tab')[1].classList.add('active');
+                        content.innerHTML = this.generarVistaAgregar();
+                        break;
+                    case 'despachar':
+                        document.querySelectorAll('.nav-tab')[2].classList.add('active');
+                        content.innerHTML = this.generarVistaDespachar(datos);
+                        break;
+                    case 'renombrar':
+                        content.innerHTML = this.generarVistaRenombrar(datos);
+                        break;
+                }
+            }
+
+            generarVistaInventario(datos) {
+                const palletInfo = datos.paqueteNumero || datos.nombrePersonalizado ? `
+                    <div style="background: var(--white); border: 1px solid var(--medium-grey); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+                        <h4 style="color: var(--onyx); margin-bottom: 16px; font-size: 18px;">${t('pallet_info')}</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                            ${datos.paqueteNumero ? `
+                                <div>
+                                    <label style="font-size: 12px; color: var(--grey); font-weight: 600;">${t('package_number')}</label>
+                                    <div style="font-size: 16px; font-weight: 700; color: var(--onyx);">${datos.paqueteNumero}</div>
+                                </div>
+                            ` : ''}
+                            ${datos.nombrePersonalizado ? `
+                                <div>
+                                    <label style="font-size: 12px; color: var(--grey); font-weight: 600;">${t('custom_pallet_name')}</label>
+                                    <div style="font-size: 16px; font-weight: 700; color: var(--onyx);">${datos.nombrePersonalizado}</div>
+                                </div>
+                            ` : ''}
+                            <div>
+                                <button class="action-button secondary" style="min-width: auto; height: 40px; padding: 8px 16px; font-size: 14px;" onclick="inventorySystem.mostrarSeccion('renombrar')">
+                                    ${t('edit_pallet_name')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="background: var(--light-grey); border: 1px solid var(--medium-grey); border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;">
+                        <button class="action-button secondary" style="min-width: auto; height: 40px; padding: 8px 16px; font-size: 14px;" onclick="inventorySystem.mostrarSeccion('renombrar')">
+                            ${t('edit_pallet_name')}
+                        </button>
+                    </div>
+                `;
+
+                const materialesHTML = datos.materiales.map(item => {
+                    const fecha = new Date(item.fecha);
+                    return `
+                        <div class="material-card">
+                            <div class="material-header">
+                                <div>
+                                    <div class="material-title">${item.descripcion || item.tipo}</div>
+                                    <div class="material-specs">
+                                        ${t('specifications')} ${item.circunferencia ? item.circunferencia + '″ ⌀' : ''} 
+                                        ${item.espesor ? ' × ' + item.espesor + '″ ' + t('thickness').toLowerCase() : ''}<br>
+                                        ${t('supplier_label')} ${item.proveedor || t('not_specified')}<br>
+                                        ${t('received')} ${fecha.toLocaleDateString()} ${t('at')} ${fecha.toLocaleTimeString()}
+                                    </div>
+                                </div>
+                                <div class="quantity-badge">${item.cantidad} ${item.unidad || t('units')}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="form-section">
+                        <h4>${t('current_inventory')}</h4>
+                        
+                        ${palletInfo}
+                        
+                        <div style="background: var(--light-grey); padding: 20px; border-radius: 12px; margin-bottom: 24px; text-align: center;">
+                            <div style="font-size: 32px; font-weight: 800; color: var(--crimson); margin-bottom: 8px;">${datos.total}</div>
+                            <div style="font-size: 14px; color: var(--grey); font-weight: 600;">${t('total_units_pallet')}</div>
+                        </div>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            ${materialesHTML}
+                        </div>
+                    </div>
+                `;
+            }
+
+            generarVistaAgregar() {
+                return `
+                    <div class="form-section">
+                        <h4>${t('add_material_to_pallet')}${this.palletActual}</h4>
+                        
+                        <div class="form-section">
+                            <h4>${t('material_info')}</h4>
+                            <div class="form-grid cols-2">
+                                <div class="form-group">
+                                    <label>${t('material_type')}</label>
+                                    <select id="tipo-agregar" required>
+                                        <option value="">${t('select_type')}</option>
+                                        <option value="Lamina">${t('steel_sheet')}</option>
+                                        <option value="Strap">${t('strap_band')}</option>
+                                        <option value="Codo 90">${t('elbow_90_deg')}</option>
+                                        <option value="Codo 45">${t('elbow_45_deg')}</option>
+                                        <option value="Tuberia">${t('pipe')}</option>
+                                        <option value="Accesorio">${t('accessory')}</option>
+                                        <option value="Otro">${t('other')}</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('supplier')}</label>
+                                    <input type="text" id="proveedor-agregar" placeholder="${t('supplier_name')}" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>${t('technical_specs')}</h4>
+                            <div class="form-grid cols-4">
+                                <div class="form-group">
+                                    <label>${t('circumference')}</label>
+                                    <input type="text" id="circunferencia-agregar" placeholder="12.0&quot;">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('thickness')}</label>
+                                    <input type="text" id="espesor-agregar" placeholder="1.5&quot;">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('length')}</label>
+                                    <input type="text" id="longitud-agregar" placeholder="20 ${currentLanguage === 'es' ? 'pies' : 'feet'}">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('weight')}</label>
+                                    <input type="text" id="peso-agregar" placeholder="500 kg">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h4>${t('quantity_measures')}</h4>
+                            <div class="form-grid cols-2">
+                                <div class="form-group">
+                                    <label>${t('quantity_to_add')}</label>
+                                    <input type="number" id="cantidad-agregar" placeholder="100" required min="1">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('unit_measure')}</label>
+                                    <select id="unidad-agregar" required>
+                                        <option value="pies lineales">${t('linear_feet')}</option>
+                                        <option value="piezas">${t('pieces')}</option>
+                                        <option value="metros">${t('meters')}</option>
+                                        <option value="kilogramos">${t('kilograms')}</option>
+                                        <option value="toneladas">${t('tons')}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="action-button success" onclick="inventorySystem.procesarAgregarMaterial()">
+                                ${t('add_material_btn')}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            generarVistaDespachar(datos) {
+                const materialesHTML = datos.materiales.map(item => {
+                    const fecha = new Date(item.fecha);
+                    return `
+                        <div class="material-card">
+                            <div class="material-header">
+                                <div>
+                                    <div class="material-title">${item.descripcion || item.tipo}</div>
+                                    <div class="material-specs">
+                                        ${t('available_stock')} <strong>${item.cantidad} ${item.unidad || t('units')}</strong><br>
+                                        ${t('supplier_label')} ${item.proveedor || t('not_specified')}<br>
+                                        ${t('received')} ${fecha.toLocaleDateString()}
+                                    </div>
+                                </div>
+                                <div class="quantity-badge">${t('stock')}: ${item.cantidad}</div>
+                            </div>
+                            <div class="dispatch-controls">
+                                <div class="dispatch-row">
+                                    <label style="font-weight: 600; color: var(--onyx); min-width: 150px;">${t('quantity_to_dispatch')}:</label>
+                                    <input type="number" id="despachar-${item.id}" class="dispatch-input" 
+                                           min="0" max="${item.cantidad}" placeholder="0">
+                                    <span style="color: var(--grey); font-weight: 500;">${currentLanguage === 'es' ? 'de' : 'of'} ${item.cantidad} ${t('available_units')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="form-section">
+                        <h4>${t('dispatch_material_from')}${this.palletActual}</h4>
+                        <div style="max-height: 500px; overflow-y: auto;">
+                            ${materialesHTML}
+                        </div>
+                        <div class="button-group">
+                            <button class="action-button primary" onclick="inventorySystem.procesarDespachoSelectivo()">
+                                ${t('confirm_selective_dispatch')}
+                            </button>
+                            <button class="action-button danger" onclick="inventorySystem.despacharPalletCompleto()">
+                                ${t('dispatch_entire_pallet')}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            generarVistaRenombrar(datos) {
+                return `
+                    <div class="form-section">
+                        <h4>${t('rename_pallet')} P${this.palletActual}</h4>
+                        
+                        <div class="form-grid cols-2">
+                            <div class="form-group">
+                                <label>${t('package_number')}</label>
+                                <input type="text" id="paquete-numero-edit" value="${datos.paqueteNumero || ''}" placeholder="PAQ-001">
+                            </div>
+                            <div class="form-group">
+                                <label>${t('custom_pallet_name')}</label>
+                                <input type="text" id="nombre-pallet-edit" value="${datos.nombrePersonalizado || ''}" placeholder="${t('custom_name_placeholder')}">
+                            </div>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="action-button success" onclick="inventorySystem.procesarRenombrePallet()">
+                                ${t('update_name')}
+                            </button>
+                            <button class="action-button secondary" onclick="inventorySystem.mostrarSeccion('inventario')">
+                                ${t('cancel')}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            async procesarCreacionPallet(posX, posY) {
+                try {
+                    console.log('Procesando creación de pallet...');
+                    
+                    // Obtener datos del pallet
+                    const paqueteNumero = document.getElementById('paquete-numero-nuevo').value.trim();
+                    const nombrePallet = document.getElementById('nombre-pallet-nuevo').value.trim();
+                    
+                    // Obtener datos del material
+                    const tipo = document.getElementById('tipo-material-nuevo').value;
+                    const proveedor = document.getElementById('proveedor-nuevo').value;
+                    const circunf = document.getElementById('circunferencia-nuevo').value;
+                    const espesor = document.getElementById('espesor-nuevo').value;
+                    const longitud = document.getElementById('longitud-nuevo').value;
+                    const peso = document.getElementById('peso-nuevo').value;
+                    const cantidad = parseInt(document.getElementById('cantidad-nuevo').value);
+                    const unidad = document.getElementById('unidad-nuevo').value;
+                    
+                    console.log('Datos del formulario:', { paqueteNumero, nombrePallet, tipo, proveedor, cantidad, unidad });
+                    
+                    if (!paqueteNumero || !tipo || !proveedor || !circunf || !espesor || !cantidad || !unidad) {
+                        this.mostrarNotificacion(t('complete_required_fields'), 'warning');
+                        return;
+                    }
+
+                    const numeroAsignado = await this.obtenerProximoNumero();
+                    
+                    let descripcion = tipo;
+                    if (circunf && espesor) {
+                        descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
+                        if (longitud) descripcion += ` × ${longitud}`;
+                        if (peso) descripcion += ` (${peso})`;
+                    }
+
+                    // En modo online, guardar en Supabase
+                    if (this.isOnline && this.supabase) {
+                        const { data: palletData, error: palletError } = await this.supabase
+                            .from('pallets')
+                            .insert({
+                                numero: numeroAsignado,
+                                posicion_x: posX,
+                                posicion_y: posY,
+                                paquete_numero: paqueteNumero,
+                                nombre_personalizado: nombrePallet || null
+                            })
+                            .select()
+                            .single();
+
+                        if (palletError) throw palletError;
+
+                        const { data: materialData, error: materialError } = await this.supabase
+                            .from('materiales')
+                            .insert({
+                                pallet_id: palletData.id,
+                                tipo: tipo,
+                                circunferencia: circunf,
+                                espesor: espesor,
+                                cantidad: cantidad,
+                                unidad: unidad,
+                                proveedor: proveedor,
+                                descripcion_completa: descripcion,
+                                usuario_registro: this.usuarioActual
+                            })
+                            .select()
+                            .single();
+
+                        if (materialError) throw materialError;
+                    }
+
+                    // Remover pallet temporal
+                    const palletTemporal = document.querySelector('[data-pallet="temporal"]');
+                    if (palletTemporal) palletTemporal.remove();
+
+                    // Crear pallet definitivo en inventario local
+                    this.inventario[numeroAsignado] = {
+                        materiales: [{
+                            id: this.isOnline ? 'db_id' : 'local_' + Date.now(),
+                            tipo: tipo,
+                            circunferencia: circunf,
+                            espesor: espesor,
+                            cantidad: cantidad,
+                            unidad: unidad,
+                            proveedor: proveedor,
+                            descripcion: descripcion,
+                            fecha: new Date().toISOString()
+                        }],
+                        total: cantidad,
+                        created: new Date().toISOString(),
+                        posicion: { x: posX, y: posY },
+                        paqueteNumero: paqueteNumero,
+                        nombrePersonalizado: nombrePallet || null
+                    };
+
+                    console.log('Creando pallet visual:', numeroAsignado);
+                    this.crearPalletVisual(numeroAsignado, posX, posY, 'occupied');
+                    this.cerrarModal();
+                    this.actualizarEstadisticas();
+                    
+                    this.mostrarNotificacion('Pallet P' + numeroAsignado + ' ' + t('pallet_created_success'), 'success');
+                    
+                } catch (error) {
+                    this.logError('Error procesando creación', error);
+                    this.mostrarNotificacion(t('error_creating_pallet') + ' ' + error.message, 'error');
+                }
+            }
+
+            async procesarAgregarMaterial() {
+                try {
+                    const tipo = document.getElementById('tipo-agregar').value;
+                    const proveedor = document.getElementById('proveedor-agregar').value;
+                    const circunf = document.getElementById('circunferencia-agregar').value;
+                    const espesor = document.getElementById('espesor-agregar').value;
+                    const longitud = document.getElementById('longitud-agregar').value;
+                    const peso = document.getElementById('peso-agregar').value;
+                    const cantidad = parseInt(document.getElementById('cantidad-agregar').value);
+                    const unidad = document.getElementById('unidad-agregar').value;
+                    
+                    if (!tipo || !proveedor || !cantidad || !unidad) {
+                        this.mostrarNotificacion(t('complete_required_fields'), 'warning');
+                        return;
+                    }
+
+                    // En modo online, guardar en Supabase
+                    if (this.isOnline && this.supabase) {
+                        // Buscar el pallet en la base de datos
+                        const { data: palletData, error: palletError } = await this.supabase
+                            .from('pallets')
+                            .select('id')
+                            .eq('numero', parseInt(this.palletActual))
+                            .single();
+
+                        if (palletError) throw palletError;
+
+                        let descripcion = tipo;
+                        if (circunf && espesor) {
+                            descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
+                            if (longitud) descripcion += ` × ${longitud}`;
+                            if (peso) descripcion += ` (${peso})`;
+                        }
+
+                        const { data: materialData, error: materialError } = await this.supabase
+                            .from('materiales')
+                            .insert({
+                                pallet_id: palletData.id,
+                                tipo: tipo,
+                                circunferencia: circunf,
+                                espesor: espesor,
+                                cantidad: cantidad,
+                                unidad: unidad,
+                                proveedor: proveedor,
+                                descripcion_completa: descripcion,
+                                usuario_registro: this.usuarioActual
+                            })
+                            .select()
+                            .single();
+
+                        if (materialError) throw materialError;
+                    }
+
+                    // Actualizar inventario local
+                    let descripcion = tipo;
+                    if (circunf && espesor) {
+                        descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
+                        if (longitud) descripcion += ` × ${longitud}`;
+                        if (peso) descripcion += ` (${peso})`;
+                    }
+
+                    this.inventario[this.palletActual].materiales.push({
+                        id: 'local_' + Date.now(),
+                        tipo: tipo,
+                        circunferencia: circunf,
+                        espesor: espesor,
+                        cantidad: cantidad,
+                        unidad: unidad,
+                        proveedor: proveedor,
+                        descripcion: descripcion,
+                        fecha: new Date().toISOString()
+                    });
+
+                    this.inventario[this.palletActual].total += cantidad;
+                    
+                    this.actualizarNavegacionModal(this.palletActual);
+                    this.mostrarSeccion('inventario');
+                    this.actualizarEstadisticas();
+                    
+                    this.mostrarNotificacion(t('material_added_success'), 'success');
+                    
+                } catch (error) {
+                    this.logError('Error agregando material', error);
+                    this.mostrarNotificacion(t('error_adding_material') + ' ' + error.message, 'error');
+                }
+            }
+
+            async procesarRenombrePallet() {
+                try {
+                    const paqueteNumero = document.getElementById('paquete-numero-edit').value.trim();
+                    const nombrePallet = document.getElementById('nombre-pallet-edit').value.trim();
+                    
+                    // Actualizar en Supabase si está online
+                    if (this.isOnline && this.supabase) {
+                        const { error } = await this.supabase
+                            .from('pallets')
+                            .update({
+                                paquete_numero: paqueteNumero || null,
+                                nombre_personalizado: nombrePallet || null
+                            })
+                            .eq('numero', parseInt(this.palletActual));
+                        
+                        if (error) throw error;
+                    }
+                    
+                    // Actualizar en inventario local
+                    this.inventario[this.palletActual].paqueteNumero = paqueteNumero || null;
+                    this.inventario[this.palletActual].nombrePersonalizado = nombrePallet || null;
+                    
+                    // Volver a mostrar inventario actualizado
+                    this.mostrarSeccion('inventario');
+                    
+                    this.mostrarNotificacion(t('pallet_renamed_success'), 'success');
+                    
+                } catch (error) {
+                    this.logError('Error renombrando pallet', error);
+                    this.mostrarNotificacion(t('error_renaming_pallet') + ' ' + error.message, 'error');
+                }
+            }
+
+            async procesarDespachoSelectivo() {
+                try {
+                    const datos = this.inventario[this.palletActual];
+                    const despachos = [];
+                    let totalDespachado = 0;
+                    
+                    for (const material of datos.materiales) {
+                        const input = document.getElementById(`despachar-${material.id}`);
+                        if (input && input.value && parseInt(input.value) > 0) {
+                            const cantidadDespacho = parseInt(input.value);
+                            if (cantidadDespacho <= material.cantidad) {
+                                despachos.push({
+                                    id: material.id,
+                                    cantidad: cantidadDespacho,
+                                    cantidadRestante: material.cantidad - cantidadDespacho
+                                });
+                                totalDespachado += cantidadDespacho;
+                            }
+                        }
+                    }
+                    
+                    if (despachos.length === 0) {
+                        this.mostrarNotificacion('No hay cantidades válidas para despachar', 'warning');
+                        return;
+                    }
+                    
+                    // Procesar cada despacho
+                    for (const despacho of despachos) {
+                        if (this.isOnline && this.supabase) {
+                            if (despacho.cantidadRestante === 0) {
+                                // Marcar como inactivo
+                                const { error } = await this.supabase
+                                    .from('materiales')
+                                    .update({ activo: false })
+                                    .eq('id', despacho.id);
+                                
+                                if (error) throw error;
+                            } else {
+                                // Actualizar cantidad
+                                const { error } = await this.supabase
+                                    .from('materiales')
+                                    .update({ cantidad: despacho.cantidadRestante })
+                                    .eq('id', despacho.id);
+                                
+                                if (error) throw error;
+                            }
+                        }
+                        
+                        // Actualizar localmente
+                        const materialIndex = datos.materiales.findIndex(m => m.id === despacho.id);
+                        if (materialIndex !== -1) {
+                            if (despacho.cantidadRestante === 0) {
+                                datos.materiales.splice(materialIndex, 1);
+                            } else {
+                                datos.materiales[materialIndex].cantidad = despacho.cantidadRestante;
+                            }
+                        }
+                    }
+                    
+                    // Recalcular total
+                    datos.total = datos.materiales.reduce((sum, m) => sum + m.cantidad, 0);
+                    
+                    // Si el pallet quedó vacío, removerlo
+                    if (datos.total === 0) {
+                        delete this.inventario[this.palletActual];
+                        const palletElement = document.querySelector(`[data-pallet="${this.palletActual}"]`);
+                        if (palletElement) palletElement.remove();
+                    }
+                    
+                    this.actualizarEstadisticas();
+                    this.cerrarModal();
+                    
+                    this.mostrarNotificacion(t('dispatch_success'), 'success');
+                    
+                } catch (error) {
+                    this.logError('Error en despacho selectivo', error);
+                    this.mostrarNotificacion(t('error_dispatching') + ' ' + error.message, 'error');
+                }
+            }
+
+            async despacharPalletCompleto() {
+                try {
+                    const confirmText = currentLanguage === 'es' ? 
+                        '¿Estás seguro de despachar todo el pallet P' + this.palletActual + '?' :
+                        'Are you sure you want to dispatch the entire pallet P' + this.palletActual + '?';
+                        
+                    if (!confirm(confirmText)) {
+                        return;
+                    }
+                    
+                    const datos = this.inventario[this.palletActual];
+                    
+                    // Marcar todos los materiales como inactivos en Supabase
+                    if (this.isOnline && this.supabase) {
+                        for (const material of datos.materiales) {
+                            const { error } = await this.supabase
+                                .from('materiales')
+                                .update({ activo: false })
+                                .eq('id', material.id);
+                            
+                            if (error) throw error;
+                        }
+                    }
+                    
+                    // Remover del inventario local
+                    delete this.inventario[this.palletActual];
+                    const palletElement = document.querySelector(`[data-pallet="${this.palletActual}"]`);
+                    if (palletElement) palletElement.remove();
+                    
+                    this.actualizarEstadisticas();
+                    this.cerrarModal();
+                    
+                    this.mostrarNotificacion(t('pallet_dispatched_complete'), 'success');
+                    
+                } catch (error) {
+                    this.logError('Error despachando pallet completo', error);
+                    this.mostrarNotificacion(t('error_dispatching') + ' ' + error.message, 'error');
+                }
+            }
+
+            cancelarCreacion() {
+                const palletTemporal = document.querySelector('[data-pallet="temporal"]');
+                if (palletTemporal) palletTemporal.remove();
+                this.cerrarModal();
+            }
+
+            async obtenerProximoNumero() {
+                try {
+                    // Si está online, consultar base de datos
+                    if (this.isOnline && this.supabase) {
+                        const { data: pallets, error } = await this.supabase
+                            .from('pallets')
+                            .select('numero')
+                            .order('numero', { ascending: true });
+                        
+                        if (error) throw error;
+                        
+                        if (!pallets || pallets.length === 0) return 1;
+                        
+                        const numeros = pallets.map(p => p.numero).sort((a, b) => a - b);
+                        
+                        for (let i = 1; i <= numeros.length + 1; i++) {
+                            if (!numeros.includes(i)) {
+                                return i;
+                            }
+                        }
+                        
+                        return Math.max(...numeros) + 1;
+                    } else {
+                        // Modo offline - usar inventario local
+                        const numerosExistentes = Object.keys(this.inventario).map(id => parseInt(id)).sort((a, b) => a - b);
+                        
+                        if (numerosExistentes.length === 0) return 1;
+                        
+                        for (let i = 1; i <= numerosExistentes.length + 1; i++) {
+                            if (!numerosExistentes.includes(i)) {
+                                return i;
+                            }
+                        }
+                        
+                        return Math.max(...numerosExistentes) + 1;
+                    }
+                } catch (error) {
+                    this.logError('Error obteniendo próximo número', error);
+                    return Object.keys(this.inventario).length + 1;
+                }
+            }
+
+            configurarSincronizacion() {
+                if (!this.supabase || !this.isOnline) return;
+                
+                const self = this;
+                this.pollingInterval = setInterval(async function() {
+                    try {
+                        await self.cargarInventarioDesdeDB();
+                        self.actualizarEstadisticas();
+                    } catch (error) {
+                        self.logError('Error en sincronización', error);
+                    }
+                }, CONFIG.POLLING_INTERVAL);
+                
+                this.logInfo('Sincronización automática configurada');
+            }
+
+            buscarMateriales() {
+                const tipo = document.getElementById('search-tipo').value;
+                const circunf = document.getElementById('search-circunf').value.trim();
+                const espesor = document.getElementById('search-espesor').value.trim();
+                
+                const resultados = document.getElementById('resultados-busqueda');
+                const contenido = document.getElementById('contenido-resultados');
+                
+                const materialesEncontrados = [];
+                
+                Object.keys(this.inventario).forEach(palletId => {
+                    const pallet = this.inventario[palletId];
+                    pallet.materiales.forEach(material => {
+                        let coincide = true;
+                        
+                        if (tipo && material.tipo !== tipo) coincide = false;
+                        if (circunf && (!material.circunferencia || !material.circunferencia.includes(circunf))) coincide = false;
+                        if (espesor && (!material.espesor || !material.espesor.includes(espesor))) coincide = false;
+                        
+                        if (coincide) {
+                            materialesEncontrados.push({...material, palletId});
+                        }
+                    });
+                });
+                
+                if (materialesEncontrados.length > 0) {
+                    contenido.innerHTML = materialesEncontrados.map(material => 
+                        `<div style="background: var(--white); padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--medium-grey);">
+                            <strong>Pallet P${material.palletId}</strong> - ${material.descripcion || material.tipo}<br>
+                            <small style="color: var(--grey);">${currentLanguage === 'es' ? 'Cantidad' : 'Quantity'}: ${material.cantidad} ${material.unidad || t('units')}</small>
+                        </div>`
+                    ).join('');
+                    resultados.style.display = 'block';
+                } else {
+                    contenido.innerHTML = `<div style="color: var(--grey); text-align: center; padding: 20px;">${currentLanguage === 'es' ? 'No se encontraron materiales' : 'No materials found'}</div>`;
+                    resultados.style.display = 'block';
+                }
+            }
+
+            limpiarBusqueda() {
+                document.getElementById('search-tipo').value = '';
+                document.getElementById('search-circunf').value = '';
+                document.getElementById('search-espesor').value = '';
+                document.getElementById('resultados-busqueda').style.display = 'none';
+            }
+
+            cerrarModal() {
+                document.getElementById('modal').classList.remove('active');
+                this.palletActual = null;
+                this.seccionActiva = 'inventario';
+            }
+
+            actualizarEstadoConexion(estado) {
+                const statusElement = document.getElementById('connection-status');
+                if (statusElement) {
+                    statusElement.className = 'connection-status ' + (estado === 'connected' ? 'connected' : 'disconnected');
+                    statusElement.textContent = t(estado);
+                }
+            }
+
+            actualizarEstadisticas() {
+                const totalPallets = Object.keys(this.inventario).length;
+                const palletsOcupados = Object.keys(this.inventario).filter(id => this.inventario[id].total > 0).length;
+
+                const contadorTotal = document.getElementById('contador-pallets');
+                const contadorOcupados = document.getElementById('contador-ocupados');
+                
+                if (contadorTotal) contadorTotal.textContent = totalPallets;
+                if (contadorOcupados) contadorOcupados.textContent = palletsOcupados;
+            }
+
+            mostrarNotificacion(mensaje, tipo) {
+                console.log(`NOTIFICACIÓN ${tipo.toUpperCase()}: ${mensaje}`);
+                
+                // Crear notificación visual moderna
+                const notif = document.createElement('div');
+                notif.style.cssText = `
+                    position: fixed; top: 80px; right: 20px; z-index: 3000;
+                    padding: 16px 24px; border-radius: 12px; color: white;
+                    font-weight: 600; max-width: 300px; word-wrap: break-word;
+                    animation: slideInRight 0.3s ease-out;
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                `;
+                
+                if (tipo === 'success') {
+                    notif.style.background = 'var(--crimson)';
+                } else if (tipo === 'error') {
+                    notif.style.background = 'var(--steel)';
+                } else {
+                    notif.style.background = 'var(--dark-grey)';
+                }
+                
+                notif.textContent = mensaje;
+                document.body.appendChild(notif);
+                
+                setTimeout(() => {
+                    notif.style.animation = 'slideOutRight 0.3s ease-in forwards';
+                    setTimeout(() => notif.remove(), 300);
+                }, 3000);
+            }
+        }
+
+        // Inicialización automática con manejo robusto
+        console.log('=== INICIALIZANDO SISTEMA ENTERPRISE ===');
+        
+        function inicializarSistema() {
+            try {
+                window.inventorySystem = new InventorySystem();
+                window.inventorySystem.init().then(() => {
+                    console.log('=== SISTEMA ENTERPRISE LISTO ===');
+                }).catch(error => {
+                    console.error('ERROR EN INICIALIZACIÓN ASYNC:', error);
+                });
+            } catch (error) {
+                console.error('ERROR CRÍTICO EN INICIALIZACIÓN:', error);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', inicializarSistema);
+        } else {
+            setTimeout(inicializarSistema, 100);
+        }
+    </script>
+</body>
+</html>
