@@ -2775,13 +2775,14 @@
                     // Determinar número a usar
                     let numeroAsignado;
                     if (numeroPersonalizado && numeroPersonalizado > 0) {
-                        // Validar que no esté repetido
-                        if (this.inventario[numeroPersonalizado]) {
+                        // Validar que no esté repetido en base de datos
+                        const disponible = await this.validarNumeroDisponibleDB(numeroPersonalizado);
+                        if (!disponible) {
                             this.mostrarNotificacion(`El número de pallet ${numeroPersonalizado} ya está en uso`, 'error');
                             return;
                         }
                         numeroAsignado = numeroPersonalizado;
-                        console.log('Usando número personalizado:', numeroAsignado);
+                        console.log('Usando número personalizado validado:', numeroAsignado);
                     } else {
                         // Auto-asignar el próximo disponible
                         numeroAsignado = await this.obtenerProximoNumero();
@@ -2967,9 +2968,12 @@
                     const nombrePallet = nombreElement ? nombreElement.value.trim() : '';
                     
                     // Validar que el número no esté repetido (excepto si es el mismo pallet)
-                    if (nuevoNumero != this.palletActual && this.inventario[nuevoNumero]) {
-                        this.mostrarNotificacion(`El número de pallet ${nuevoNumero} ya está en uso`, 'error');
-                        return;
+                    if (nuevoNumero != this.palletActual) {
+                        const disponible = await this.validarNumeroDisponibleDB(nuevoNumero);
+                        if (!disponible) {
+                            this.mostrarNotificacion(`El número de pallet ${nuevoNumero} ya está en uso`, 'error');
+                            return;
+                        }
                     }
                     
                     const numeroAnterior = this.palletActual;
@@ -3187,11 +3191,12 @@
             }
 
             async obtenerProximoNumero() {
-                // Función simplificada que encuentra el próximo número disponible sin restricciones
+                // Función que siempre consulta base de datos cuando está online para evitar conflictos
                 try {
                     let numerosExistentes = [];
                     
                     if (this.isOnline && this.supabase) {
+                        console.log('Consultando todos los números en base de datos...');
                         const { data: pallets, error } = await this.supabase
                             .from('pallets')
                             .select('numero')
@@ -3199,36 +3204,67 @@
                         
                         if (error) throw error;
                         numerosExistentes = pallets ? pallets.map(p => p.numero) : [];
+                        console.log('Números existentes en DB:', numerosExistentes);
                     } else {
                         numerosExistentes = Object.keys(this.inventario).map(id => parseInt(id));
+                        console.log('Números existentes localmente:', numerosExistentes);
                     }
                     
                     // Buscar el primer número disponible empezando desde 1
                     for (let i = 1; i <= 999999; i++) {
                         if (!numerosExistentes.includes(i)) {
+                            console.log('Próximo número disponible:', i);
                             return i;
                         }
                     }
                     
                     // Fallback: último número + 1
-                    return Math.max(0, ...numerosExistentes) + 1;
+                    const siguiente = Math.max(0, ...numerosExistentes) + 1;
+                    console.log('Fallback - siguiente número:', siguiente);
+                    return siguiente;
                     
                 } catch (error) {
-                    console.error('Error obteniendo próximo número:', error);
-                    // Fallback local
+                    console.error('Error obteniendo próximo número de DB:', error);
+                    // Fallback local en caso de error de red
                     const numerosLocales = Object.keys(this.inventario).map(id => parseInt(id));
                     for (let i = 1; i <= 999999; i++) {
                         if (!numerosLocales.includes(i)) {
+                            console.log('Fallback local - número disponible:', i);
                             return i;
                         }
                     }
-                    return numerosLocales.length + 1;
+                    return Math.max(0, ...numerosLocales) + 1;
                 }
             }
 
-            // Función para validar si un número está disponible
-            validarNumeroDisponible(numero) {
-                return !this.inventario[numero];
+            // Función para validar si un número está disponible en base de datos
+            async validarNumeroDisponibleDB(numero) {
+                try {
+                    if (!this.isOnline || !this.supabase) {
+                        return !this.inventario[numero];
+                    }
+                    
+                    const { data, error } = await this.supabase
+                        .from('pallets')
+                        .select('numero')
+                        .eq('numero', numero)
+                        .single();
+                    
+                    if (error && error.code === 'PGRST116') {
+                        // No encontrado = disponible
+                        return true;
+                    }
+                    
+                    if (error) throw error;
+                    
+                    // Si encontró datos = ocupado
+                    return false;
+                    
+                } catch (error) {
+                    console.error('Error validando número en DB:', error);
+                    // Fallback a validación local
+                    return !this.inventario[numero];
+                }
             }
 
             // Función para obtener todos los números ocupados
