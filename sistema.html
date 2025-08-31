@@ -247,8 +247,10 @@
             background-size: 50px 50px;
             background-position: 0 0, 25px 25px;
             overflow: visible;
-            touch-action: pan-x pan-y;
+            touch-action: pan-x pan-y pinch-zoom;
             overscroll-behavior: contain;
+            transform-origin: center center;
+            transition: transform 0.1s ease-out;
         }
 
         .pallet {
@@ -1464,6 +1466,16 @@
             configurarSistemaArrastre() {
                 const self = this;
                 
+                // Variables para el control de zoom
+                this.zoom = {
+                    scale: 1,
+                    minScale: 0.5,
+                    maxScale: 3,
+                    initialDistance: 0,
+                    initialScale: 1,
+                    isZooming: false
+                };
+                
                 // Arrastre con mouse
                 document.addEventListener('mousemove', function(e) {
                     if (self.arrastre.activo && self.arrastre.dragStarted) {
@@ -1477,14 +1489,44 @@
                     }
                 }, { passive: true });
 
-                // Arrastre touch optimizado y fluido
+                // Zoom con rueda del mouse en el warehouse
+                const warehouse = document.getElementById('warehouse');
+                warehouse.addEventListener('wheel', function(e) {
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                        self.aplicarZoom(self.zoom.scale + delta, e.clientX, e.clientY);
+                    }
+                }, { passive: false });
+
+                // Arrastre touch optimizado y fluido con soporte para zoom
                 document.addEventListener('touchstart', function(e) {
-                    if (e.touches.length === 1) {
+                    if (e.touches.length === 2) {
+                        // Zoom con dos dedos
+                        const touch1 = e.touches[0];
+                        const touch2 = e.touches[1];
+                        const distance = Math.sqrt(
+                            Math.pow(touch2.clientX - touch1.clientX, 2) +
+                            Math.pow(touch2.clientY - touch1.clientY, 2)
+                        );
+                        
+                        self.zoom.initialDistance = distance;
+                        self.zoom.initialScale = self.zoom.scale;
+                        self.zoom.isZooming = true;
+                        
+                        // Cancelar cualquier arrastre en progreso
+                        if (self.arrastre.potentialElement) {
+                            self.arrastre.potentialElement = null;
+                            self.arrastre.potentialPalletId = null;
+                            self.arrastre.dragStarted = false;
+                            self.arrastre.hasMoved = false;
+                        }
+                    } else if (e.touches.length === 1 && !self.zoom.isZooming) {
+                        // Arrastre con un dedo (solo si no estamos haciendo zoom)
                         const touch = e.touches[0];
                         const element = document.elementFromPoint(touch.clientX, touch.clientY);
                         
                         if (element && element.classList.contains('pallet') && !element.classList.contains('temporal')) {
-                            // Iniciar arrastre inmediatamente sin delay
                             self.arrastre.startX = touch.clientX;
                             self.arrastre.startY = touch.clientY;
                             self.arrastre.touchStartTime = Date.now();
@@ -1497,13 +1539,28 @@
                 }, { passive: true });
                 
                 document.addEventListener('touchmove', function(e) {
-                    if (e.touches.length === 1 && self.arrastre.potentialElement) {
+                    if (e.touches.length === 2 && self.zoom.isZooming) {
+                        // Zoom con dos dedos
+                        e.preventDefault();
+                        const touch1 = e.touches[0];
+                        const touch2 = e.touches[1];
+                        const distance = Math.sqrt(
+                            Math.pow(touch2.clientX - touch1.clientX, 2) +
+                            Math.pow(touch2.clientY - touch1.clientY, 2)
+                        );
+                        
+                        const scale = self.zoom.initialScale * (distance / self.zoom.initialDistance);
+                        const centerX = (touch1.clientX + touch2.clientX) / 2;
+                        const centerY = (touch1.clientY + touch2.clientY) / 2;
+                        
+                        self.aplicarZoom(scale, centerX, centerY);
+                    } else if (e.touches.length === 1 && self.arrastre.potentialElement && !self.zoom.isZooming) {
+                        // Arrastre con un dedo
                         const touch = e.touches[0];
                         const deltaX = Math.abs(touch.clientX - self.arrastre.startX);
                         const deltaY = Math.abs(touch.clientY - self.arrastre.startY);
                         const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                         
-                        // Iniciar arrastre con movimiento mínimo (5px) y sin delay
                         if (totalMovement > 5 && !self.arrastre.dragStarted) {
                             e.preventDefault();
                             self.arrastre.dragStarted = true;
@@ -1515,7 +1572,6 @@
                                 touch.clientY
                             );
                         } else if (self.arrastre.dragStarted) {
-                            // Continuar arrastre fluido
                             e.preventDefault();
                             self.arrastre.hasMoved = true;
                             self.procesarMovimiento(touch.clientX, touch.clientY);
@@ -1524,24 +1580,44 @@
                 }, { passive: false });
                 
                 document.addEventListener('touchend', function(e) {
-                    if (self.arrastre.dragStarted) {
+                    if (self.zoom.isZooming && e.touches.length < 2) {
+                        // Finalizar zoom
+                        self.zoom.isZooming = false;
+                    } else if (self.arrastre.dragStarted) {
+                        // Finalizar arrastre
                         self.finalizarArrastre();
-                    } else if (self.arrastre.potentialElement && !self.arrastre.hasMoved) {
-                        // Solo abrir modal si no hubo movimiento (click/tap real)
+                    } else if (self.arrastre.potentialElement && !self.arrastre.hasMoved && !self.zoom.isZooming) {
+                        // Click/tap solo si no hubo movimiento ni zoom
                         const timeDelta = Date.now() - self.arrastre.touchStartTime;
-                        if (timeDelta < 200) { // Tap rápido
+                        if (timeDelta < 200) {
                             self.abrirModalGestion(self.arrastre.potentialPalletId);
                         }
                     }
                     
-                    // Reset completo del estado
-                    self.arrastre.potentialElement = null;
-                    self.arrastre.potentialPalletId = null;
-                    self.arrastre.dragStarted = false;
-                    self.arrastre.hasMoved = false;
+                    // Reset del estado
+                    if (e.touches.length === 0) {
+                        self.arrastre.potentialElement = null;
+                        self.arrastre.potentialPalletId = null;
+                        self.arrastre.dragStarted = false;
+                        self.arrastre.hasMoved = false;
+                    }
                 }, { passive: true });
                 
-                console.log('Sistema de arrastre optimizado - fluido y sin interrupciones');
+                console.log('Sistema de arrastre y zoom configurado - soporte completo para touch y mouse');
+            }
+
+            aplicarZoom(newScale, centerX, centerY) {
+                // Limitar el zoom dentro de los rangos permitidos
+                newScale = Math.max(this.zoom.minScale, Math.min(this.zoom.maxScale, newScale));
+                
+                if (newScale !== this.zoom.scale) {
+                    this.zoom.scale = newScale;
+                    
+                    const warehouse = document.getElementById('warehouse');
+                    warehouse.style.transform = `scale(${newScale})`;
+                    
+                    console.log(`Zoom aplicado: ${(newScale * 100).toFixed(0)}%`);
+                }
             }
 
             iniciarArrastre(elemento, palletId, clientX, clientY) {
