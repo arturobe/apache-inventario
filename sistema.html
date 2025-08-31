@@ -1774,16 +1774,36 @@
                 const pallet = document.createElement('div');
                 pallet.className = 'pallet ' + tipo;
                 pallet.dataset.pallet = palletId;
-                pallet.textContent = tipo === 'temporal' ? '?' : palletId;
                 pallet.style.left = safeX + 'px';
                 pallet.style.top = safeY + 'px';
                 
+                // Configurar contenido del pallet
                 if (tipo === 'temporal') {
+                    pallet.textContent = '?';
                     pallet.title = t('new_pallet_click');
-                } else if (tipo === 'empty') {
-                    pallet.title = 'Pallet P' + palletId + ' - VACÍO (Click para gestionar o eliminar)';
                 } else {
-                    pallet.title = 'Pallet P' + palletId + ' - ' + t('pallet_drag_manage');
+                    // Obtener datos del pallet para mostrar número de paquete si existe
+                    const datospallet = this.inventario[palletId];
+                    const paqueteNumero = datospallet?.paqueteNumero;
+                    
+                    if (paqueteNumero) {
+                        // Mostrar número de pallet + número de paquete
+                        pallet.innerHTML = `
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;">
+                                <div style="font-size: 14px; font-weight: 700;">${palletId}</div>
+                                <div style="font-size: 7px; font-weight: 500; opacity: 0.9; margin-top: -2px;">${paqueteNumero}</div>
+                            </div>
+                        `;
+                    } else {
+                        // Solo mostrar número de pallet
+                        pallet.textContent = palletId;
+                    }
+                    
+                    if (tipo === 'empty') {
+                        pallet.title = 'Pallet P' + palletId + (paqueteNumero ? ` (${paqueteNumero})` : '') + ' - VACÍO (Click para gestionar o eliminar)';
+                    } else {
+                        pallet.title = 'Pallet P' + palletId + (paqueteNumero ? ` (${paqueteNumero})` : '') + ' - ' + t('pallet_drag_manage');
+                    }
                 }
 
                 const self = this;
