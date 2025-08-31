@@ -1606,18 +1606,229 @@
                 console.log('Sistema de arrastre y zoom configurado - soporte completo para touch y mouse');
             }
 
+            configurarSistemaArrastre() {
+                const self = this;
+                
+                // Variables para el control de zoom y pan
+                this.zoom = {
+                    scale: 1,
+                    minScale: 0.5,
+                    maxScale: 3,
+                    initialDistance: 0,
+                    initialScale: 1,
+                    isZooming: false
+                };
+                
+                this.pan = {
+                    x: 0,
+                    y: 0,
+                    isDragging: false,
+                    startX: 0,
+                    startY: 0,
+                    initialX: 0,
+                    initialY: 0
+                };
+                
+                // Arrastre con mouse
+                document.addEventListener('mousemove', function(e) {
+                    if (self.arrastre.activo && self.arrastre.dragStarted) {
+                        self.procesarMovimiento(e.clientX, e.clientY);
+                    } else if (self.pan.isDragging) {
+                        self.procesarPan(e.clientX, e.clientY);
+                    }
+                }, { passive: true });
+                
+                document.addEventListener('mouseup', function(e) {
+                    if (self.arrastre.activo) {
+                        self.finalizarArrastre();
+                    } else if (self.pan.isDragging) {
+                        self.finalizarPan();
+                    }
+                }, { passive: true });
+
+                // Zoom con rueda del mouse en el warehouse
+                const warehouse = document.getElementById('warehouse');
+                warehouse.addEventListener('wheel', function(e) {
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                        self.aplicarZoom(self.zoom.scale + delta, e.clientX, e.clientY);
+                    }
+                }, { passive: false });
+
+                // Mouse down en warehouse para iniciar pan
+                warehouse.addEventListener('mousedown', function(e) {
+                    const element = document.elementFromPoint(e.clientX, e.clientY);
+                    
+                    if (!element || !element.classList.contains('pallet')) {
+                        // Click en área vacía - iniciar pan del warehouse
+                        self.iniciarPan(e.clientX, e.clientY);
+                        e.preventDefault();
+                    }
+                }, { passive: false });
+
+                // Arrastre touch optimizado con soporte para zoom y pan
+                document.addEventListener('touchstart', function(e) {
+                    if (e.touches.length === 2) {
+                        // Zoom con dos dedos
+                        const touch1 = e.touches[0];
+                        const touch2 = e.touches[1];
+                        const distance = Math.sqrt(
+                            Math.pow(touch2.clientX - touch1.clientX, 2) +
+                            Math.pow(touch2.clientY - touch1.clientY, 2)
+                        );
+                        
+                        self.zoom.initialDistance = distance;
+                        self.zoom.initialScale = self.zoom.scale;
+                        self.zoom.isZooming = true;
+                        
+                        // Cancelar cualquier arrastre en progreso
+                        self.cancelarEstados();
+                    } else if (e.touches.length === 1 && !self.zoom.isZooming) {
+                        // Un dedo - determinar si es pallet o warehouse
+                        const touch = e.touches[0];
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        
+                        if (element && element.classList.contains('pallet') && !element.classList.contains('temporal')) {
+                            // Arrastre de pallet
+                            self.arrastre.startX = touch.clientX;
+                            self.arrastre.startY = touch.clientY;
+                            self.arrastre.touchStartTime = Date.now();
+                            self.arrastre.potentialElement = element;
+                            self.arrastre.potentialPalletId = element.dataset.pallet;
+                            self.arrastre.dragStarted = false;
+                            self.arrastre.hasMoved = false;
+                        } else {
+                            // Arrastre del warehouse (pan)
+                            self.iniciarPan(touch.clientX, touch.clientY);
+                        }
+                    }
+                }, { passive: true });
+                
+                document.addEventListener('touchmove', function(e) {
+                    if (e.touches.length === 2 && self.zoom.isZooming) {
+                        // Zoom con dos dedos
+                        e.preventDefault();
+                        const touch1 = e.touches[0];
+                        const touch2 = e.touches[1];
+                        const distance = Math.sqrt(
+                            Math.pow(touch2.clientX - touch1.clientX, 2) +
+                            Math.pow(touch2.clientY - touch1.clientY, 2)
+                        );
+                        
+                        const scale = self.zoom.initialScale * (distance / self.zoom.initialDistance);
+                        const centerX = (touch1.clientX + touch2.clientX) / 2;
+                        const centerY = (touch1.clientY + touch2.clientY) / 2;
+                        
+                        self.aplicarZoom(scale, centerX, centerY);
+                    } else if (e.touches.length === 1) {
+                        const touch = e.touches[0];
+                        
+                        if (self.arrastre.potentialElement && !self.zoom.isZooming) {
+                            // Arrastre de pallet
+                            const deltaX = Math.abs(touch.clientX - self.arrastre.startX);
+                            const deltaY = Math.abs(touch.clientY - self.arrastre.startY);
+                            const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                            
+                            if (totalMovement > 5 && !self.arrastre.dragStarted) {
+                                e.preventDefault();
+                                self.arrastre.dragStarted = true;
+                                self.arrastre.hasMoved = true;
+                                self.iniciarArrastre(
+                                    self.arrastre.potentialElement, 
+                                    self.arrastre.potentialPalletId, 
+                                    touch.clientX, 
+                                    touch.clientY
+                                );
+                            } else if (self.arrastre.dragStarted) {
+                                e.preventDefault();
+                                self.arrastre.hasMoved = true;
+                                self.procesarMovimiento(touch.clientX, touch.clientY);
+                            }
+                        } else if (self.pan.isDragging) {
+                            // Pan del warehouse
+                            e.preventDefault();
+                            self.procesarPan(touch.clientX, touch.clientY);
+                        }
+                    }
+                }, { passive: false });
+                
+                document.addEventListener('touchend', function(e) {
+                    if (self.zoom.isZooming && e.touches.length < 2) {
+                        // Finalizar zoom
+                        self.zoom.isZooming = false;
+                    } else if (self.arrastre.dragStarted) {
+                        // Finalizar arrastre de pallet
+                        self.finalizarArrastre();
+                    } else if (self.pan.isDragging) {
+                        // Finalizar pan
+                        self.finalizarPan();
+                    } else if (self.arrastre.potentialElement && !self.arrastre.hasMoved && !self.zoom.isZooming) {
+                        // Click/tap en pallet sin movimiento
+                        const timeDelta = Date.now() - self.arrastre.touchStartTime;
+                        if (timeDelta < 200) {
+                            self.abrirModalGestion(self.arrastre.potentialPalletId);
+                        }
+                    }
+                    
+                    // Reset del estado
+                    if (e.touches.length === 0) {
+                        self.cancelarEstados();
+                    }
+                }, { passive: true });
+                
+                console.log('Sistema completo: arrastre pallets + pan warehouse + zoom configurado');
+            }
+
+            cancelarEstados() {
+                this.arrastre.potentialElement = null;
+                this.arrastre.potentialPalletId = null;
+                this.arrastre.dragStarted = false;
+                this.arrastre.hasMoved = false;
+            }
+
+            iniciarPan(clientX, clientY) {
+                this.pan.isDragging = true;
+                this.pan.startX = clientX;
+                this.pan.startY = clientY;
+                this.pan.initialX = this.pan.x;
+                this.pan.initialY = this.pan.y;
+                document.body.style.cursor = 'grabbing';
+                console.log('Pan iniciado del warehouse');
+            }
+
+            procesarPan(clientX, clientY) {
+                if (!this.pan.isDragging) return;
+                
+                const deltaX = clientX - this.pan.startX;
+                const deltaY = clientY - this.pan.startY;
+                
+                this.pan.x = this.pan.initialX + deltaX;
+                this.pan.y = this.pan.initialY + deltaY;
+                
+                this.aplicarTransformWarehouse();
+            }
+
+            finalizarPan() {
+                this.pan.isDragging = false;
+                document.body.style.cursor = '';
+                console.log('Pan finalizado - nueva posición:', this.pan.x, this.pan.y);
+            }
+
             aplicarZoom(newScale, centerX, centerY) {
                 // Limitar el zoom dentro de los rangos permitidos
                 newScale = Math.max(this.zoom.minScale, Math.min(this.zoom.maxScale, newScale));
                 
                 if (newScale !== this.zoom.scale) {
                     this.zoom.scale = newScale;
-                    
-                    const warehouse = document.getElementById('warehouse');
-                    warehouse.style.transform = `scale(${newScale})`;
-                    
+                    this.aplicarTransformWarehouse();
                     console.log(`Zoom aplicado: ${(newScale * 100).toFixed(0)}%`);
                 }
+            }
+
+            aplicarTransformWarehouse() {
+                const warehouse = document.getElementById('warehouse');
+                warehouse.style.transform = `translate(${this.pan.x}px, ${this.pan.y}px) scale(${this.zoom.scale})`;
             }
 
             iniciarArrastre(elemento, palletId, clientX, clientY) {
