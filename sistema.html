@@ -2793,6 +2793,12 @@
                     const circunfA = this.fraccionADecimal(circunfAInput.replace(/"/g, ''));
                     const circunfB = this.fraccionADecimal(circunfBInput.replace(/"/g, ''));
                     
+                    // Combinar circunferencias en formato "a x b" para una sola columna
+                    let circunferenciaCombinada = circunfA;
+                    if (circunfB) {
+                        circunferenciaCombinada += ` x ${circunfB}`;
+                    }
+                    
                     let descripcion = tipo;
                     if (circunfA && espesor) {
                         const circunfADisplay = this.decimalAFraccion(circunfA);
@@ -2822,8 +2828,7 @@
                             .insert({
                                 pallet_id: palletData.id,
                                 tipo: tipo,
-                                circunferencia: circunfA || null,
-                                circunferencia_b: circunfB || null,
+                                circunferencia: circunferenciaCombinada || null,
                                 espesor: espesor || null,
                                 cantidad: cantidad,
                                 unidad: unidad,
@@ -2844,8 +2849,7 @@
                         materiales: [{
                             id: this.isOnline ? 'db_id' : 'local_' + Date.now(),
                             tipo: tipo,
-                            circunferencia: circunfA || null,
-                            circunferencia_b: circunfB || null,
+                            circunferencia: circunferenciaCombinada || null,
                             espesor: espesor || null,
                             cantidad: cantidad,
                             unidad: unidad,
@@ -3237,8 +3241,22 @@
                 }
             }
 
-            // Función para validar si un número está disponible en base de datos
-            async validarNumeroDisponibleDB(numero) {
+            // Función para parsear circunferencia combinada "a x b"
+            parsearCircunferencia(circunferenciaCombinada) {
+                if (!circunferenciaCombinada) return { a: '', b: '' };
+                
+                const partes = circunferenciaCombinada.toString().split(' x ');
+                return {
+                    a: partes[0] || '',
+                    b: partes[1] || ''
+                };
+            }
+
+            // Función para combinar circunferencias "a x b"
+            combinarCircunferencias(circunfA, circunfB) {
+                if (!circunfA) return '';
+                return circunfB ? `${circunfA} x ${circunfB}` : circunfA;
+            }
                 try {
                     if (!this.isOnline || !this.supabase) {
                         return !this.inventario[numero];
