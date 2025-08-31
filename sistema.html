@@ -886,7 +886,10 @@
                     <div><span data-i18n="total_pallets">Total pallets:</span> <strong id="contador-pallets">0</strong></div>
                     <div><span data-i18n="occupied">Ocupados:</span> <strong id="contador-ocupados">0</strong></div>
                 </div>
-                <button class="btn-clear" style="margin-top: 16px; font-size: 12px; padding: 8px;" id="btn-resetear">
+                <button class="btn-search" style="margin-top: 8px; font-size: 12px; padding: 8px;" id="btn-respaldos">
+                    Gestión de Respaldos
+                </button>
+                <button class="btn-clear" style="margin-top: 8px; font-size: 12px; padding: 8px;" id="btn-resetear">
                     Resetear Sistema
                 </button>
                 <button class="btn-search" style="margin-top: 8px; font-size: 12px; padding: 8px;" id="btn-probar">
@@ -1319,11 +1322,277 @@
                     this.configurarEventListeners();
                     this.configurarSistemaArrastre();
                     this.configurarSincronizacion();
+                    this.configurarRespaldoAutomatico();
                     this.actualizarEstadisticas();
                     console.log('Sistema enterprise completamente inicializado');
                 } catch (error) {
                     console.error('Error crítico en inicialización:', error);
                     this.mostrarNotificacion(t('connection_error') + ' ' + error.message, 'error');
+                }
+            }
+
+            // === SISTEMA DE RESPALDO AUTOMÁTICO ===
+            
+            configurarRespaldoAutomatico() {
+                if (!this.supabase || !this.isOnline) {
+                    console.log('Respaldo automático deshabilitado - sin conexión');
+                    return;
+                }
+                
+                // Verificar si ya se hizo respaldo hoy
+                this.verificarRespaldoHoy();
+                
+                // Programar verificación cada hora
+                this.respaldoInterval = setInterval(() => {
+                    this.verificarRespaldoHoy();
+                }, 60 * 60 * 1000); // Cada hora
+                
+                // Programar limpieza semanal de respaldos antiguos
+                this.limpiezaInterval = setInterval(() => {
+                    this.limpiarRespaldosAntiguos();
+                }, 7 * 24 * 60 * 60 * 1000); // Cada 7 días
+                
+                console.log('Sistema de respaldo automático configurado');
+            }
+
+            async verificarRespaldoHoy() {
+                try {
+                    const fechaHoy = new Date().toISOString().split('T')[0];
+                    
+                    // Verificar si existe respaldo de hoy
+                    const { data: respaldoExistente, error } = await this.supabase
+                        .from('respaldos')
+                        .select('id, fecha_respaldo')
+                        .eq('fecha_respaldo', fechaHoy)
+                        .single();
+                    
+                    if (error && error.code === 'PGRST116') {
+                        // No existe respaldo de hoy - crear uno
+                        console.log('No hay respaldo de hoy - creando respaldo automático...');
+                        await this.crearRespaldoAutomatico();
+                    } else if (!error) {
+                        console.log('Respaldo de hoy ya existe:', respaldoExistente.fecha_respaldo);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error verificando respaldo diario:', error);
+                }
+            }
+
+            async crearRespaldoAutomatico() {
+                try {
+                    const timestamp = new Date();
+                    const fecha = timestamp.toISOString().split('T')[0];
+                    
+                    // Recopilar estadísticas del inventario
+                    const totalPallets = Object.keys(this.inventario).length;
+                    let totalMateriales = 0;
+                    
+                    Object.values(this.inventario).forEach(pallet => {
+                        totalMateriales += pallet.materiales.length;
+                    });
+                    
+                    // Preparar datos para respaldo
+                    const datosRespaldo = {
+                        fecha_creacion: timestamp.toISOString(),
+                        version_sistema: "1.0",
+                        usuario_respaldo: this.usuarioActual,
+                        inventario_completo: this.inventario,
+                        estadisticas: {
+                            total_pallets: totalPallets,
+                            total_materiales: totalMateriales,
+                            pallets_ocupados: Object.keys(this.inventario).filter(id => this.inventario[id].total > 0).length,
+                            pallets_vacios: Object.keys(this.inventario).filter(id => this.inventario[id].total === 0).length
+                        }
+                    };
+                    
+                    // Calcular tamaño aproximado en KB
+                    const tamañoKB = Math.round(JSON.stringify(datosRespaldo).length / 1024);
+                    
+                    // Insertar respaldo en Supabase
+                    const { data, error } = await this.supabase
+                        .from('respaldos')
+                        .insert({
+                            fecha_respaldo: fecha,
+                            hora_respaldo: timestamp.toISOString(),
+                            datos_json: datosRespaldo,
+                            usuario: this.usuarioActual,
+                            total_pallets: totalPallets,
+                            total_materiales: totalMateriales,
+                            tamaño_kb: tamañoKB,
+                            estado: 'completado'
+                        })
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    console.log(`Respaldo automático creado: ${fecha} (${tamañoKB} KB, ${totalPallets} pallets, ${totalMateriales} materiales)`);
+                    this.mostrarNotificacion(`Respaldo automático completado: ${totalPallets} pallets guardados`, 'success');
+                    
+                    return data;
+                    
+                } catch (error) {
+                    console.error('Error creando respaldo automático:', error);
+                    this.mostrarNotificacion('Error en respaldo automático: ' + error.message, 'error');
+                    throw error;
+                }
+            }
+
+            async limpiarRespaldosAntiguos() {
+                try {
+                    // Mantener solo respaldos de los últimos 30 días
+                    const fechaLimite = new Date();
+                    fechaLimite.setDate(fechaLimite.getDate() - 30);
+                    const fechaLimiteStr = fechaLimite.toISOString().split('T')[0];
+                    
+                    const { data, error } = await this.supabase
+                        .from('respaldos')
+                        .delete()
+                        .lt('fecha_respaldo', fechaLimiteStr);
+                    
+                    if (error) throw error;
+                    
+                    console.log('Limpieza de respaldos antiguos completada');
+                    
+                } catch (error) {
+                    console.error('Error limpiando respaldos antiguos:', error);
+                }
+            }
+
+            // === FUNCIONES DE RESTAURACIÓN ===
+
+            async listarRespaldosDisponibles() {
+                try {
+                    const { data: respaldos, error } = await this.supabase
+                        .from('respaldos')
+                        .select('id, fecha_respaldo, hora_respaldo, usuario, total_pallets, total_materiales, tamaño_kb')
+                        .order('fecha_respaldo', { ascending: false })
+                        .limit(30);
+                    
+                    if (error) throw error;
+                    
+                    return respaldos || [];
+                    
+                } catch (error) {
+                    console.error('Error listando respaldos:', error);
+                    return [];
+                }
+            }
+
+            async restaurarDesdeRespaldo(respaldoId) {
+                try {
+                    if (!confirm('¿ADVERTENCIA: Esto reemplazará todos los datos actuales con el respaldo seleccionado. ¿Continuar?')) {
+                        return false;
+                    }
+                    
+                    // Obtener datos del respaldo
+                    const { data: respaldo, error } = await this.supabase
+                        .from('respaldos')
+                        .select('datos_json, fecha_respaldo, usuario')
+                        .eq('id', respaldoId)
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    // Restaurar inventario local
+                    this.inventario = respaldo.datos_json.inventario_completo || {};
+                    
+                    // Renderizar pallets
+                    this.renderizarTodosLosPallets();
+                    this.actualizarEstadisticas();
+                    
+                    this.mostrarNotificacion(`Inventario restaurado desde: ${respaldo.fecha_respaldo}`, 'success');
+                    console.log(`Restauración completada desde respaldo: ${respaldo.fecha_respaldo} por ${respaldo.usuario}`);
+                    
+                    return true;
+                    
+                } catch (error) {
+                    console.error('Error restaurando respaldo:', error);
+                    this.mostrarNotificacion('Error en restauración: ' + error.message, 'error');
+                    return false;
+                }
+            }
+
+            // === FUNCIONES MANUALES DE RESPALDO ===
+
+            async crearRespaldoManual() {
+                try {
+                    const resultado = await this.crearRespaldoAutomatico();
+                    if (resultado) {
+                        this.mostrarNotificacion('Respaldo manual creado exitosamente', 'success');
+                    }
+                    return resultado;
+                } catch (error) {
+                    this.mostrarNotificacion('Error creando respaldo manual: ' + error.message, 'error');
+                    throw error;
+                }
+            }
+
+            async mostrarGestionRespaldos() {
+                try {
+                    const respaldos = await this.listarRespaldosDisponibles();
+                    
+                    let html = `
+                        <div class="form-section">
+                            <h4>Gestión de Respaldos</h4>
+                            
+                            <div class="button-group" style="justify-content: flex-start; margin-bottom: 20px;">
+                                <button class="action-button primary" onclick="window.sistemaInventario.crearRespaldoManual()">
+                                    Crear Respaldo Manual
+                                </button>
+                            </div>
+                            
+                            <h5>Respaldos Disponibles (últimos 30 días):</h5>
+                            <div style="max-height: 400px; overflow-y: auto;" class="scrollable-area">
+                    `;
+                    
+                    if (respaldos.length === 0) {
+                        html += '<p style="color: var(--grey); text-align: center; padding: 20px;">No hay respaldos disponibles</p>';
+                    } else {
+                        respaldos.forEach(respaldo => {
+                            html += `
+                                <div class="material-card">
+                                    <div class="material-header">
+                                        <div>
+                                            <div class="material-title">Respaldo ${respaldo.fecha_respaldo}</div>
+                                            <div class="material-specs">
+                                                Hora: ${new Date(respaldo.hora_respaldo).toLocaleString()}<br>
+                                                Usuario: ${respaldo.usuario}<br>
+                                                Pallets: ${respaldo.total_pallets}, Materiales: ${respaldo.total_materiales}<br>
+                                                Tamaño: ${respaldo.tamaño_kb} KB
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <button class="action-button secondary" style="min-width: auto; padding: 8px 16px; font-size: 14px;" onclick="window.sistemaInventario.restaurarDesdeRespaldo(${respaldo.id})">
+                                                Restaurar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                    
+                    const modal = document.getElementById('modal');
+                    const title = document.getElementById('modal-title');
+                    const content = document.getElementById('modal-content');
+                    const nav = document.getElementById('section-nav');
+                    
+                    title.textContent = 'Gestión de Respaldos';
+                    nav.style.display = 'none';
+                    content.innerHTML = html;
+                    
+                    modal.classList.add('active');
+                    
+                } catch (error) {
+                    console.error('Error mostrando gestión de respaldos:', error);
+                    this.mostrarNotificacion('Error cargando respaldos: ' + error.message, 'error');
                 }
             }
 
@@ -1412,6 +1681,7 @@
                 const btnCerrarModal = document.getElementById('btn-cerrar-modal');
                 const btnResetear = document.getElementById('btn-resetear');
                 const btnProbar = document.getElementById('btn-probar');
+                const btnRespaldos = document.getElementById('btn-respaldos');
                 
                 if (btnCrear) {
                     btnCrear.addEventListener('click', (e) => {
@@ -1449,6 +1719,10 @@
 
                 if (btnProbar) {
                     btnProbar.addEventListener('click', () => this.probarConexion());
+                }
+
+                if (btnRespaldos) {
+                    btnRespaldos.addEventListener('click', () => this.mostrarGestionRespaldos());
                 }
 
                 // Configurar tabs del modal
