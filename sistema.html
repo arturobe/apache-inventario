@@ -1505,12 +1505,16 @@
                     }
                 }, { passive: false });
 
-                // Arrastre touch optimizado con soporte para pan
+                // Arrastre touch optimizado con soporte para pan limitado
                 document.addEventListener('touchstart', function(e) {
                     if (e.touches.length === 1 && !self.zoom?.isZooming) {
                         // Un dedo - determinar si es pallet o warehouse
                         const touch = e.touches[0];
                         const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        const warehouse = document.getElementById('warehouse');
+                        
+                        // Verificar si el touch está dentro del área del warehouse
+                        const isInsideWarehouse = warehouse && warehouse.contains(element);
                         
                         if (element && element.classList.contains('pallet') && !element.classList.contains('temporal')) {
                             // Arrastre de pallet
@@ -1521,8 +1525,8 @@
                             self.arrastre.potentialPalletId = element.dataset.pallet;
                             self.arrastre.dragStarted = false;
                             self.arrastre.hasMoved = false;
-                        } else {
-                            // Arrastre del warehouse (pan)
+                        } else if (isInsideWarehouse) {
+                            // Solo iniciar pan si está dentro del warehouse
                             self.iniciarPan(touch.clientX, touch.clientY);
                         }
                     }
@@ -1554,7 +1558,7 @@
                                 self.procesarMovimiento(touch.clientX, touch.clientY);
                             }
                         } else if (self.pan.isDragging) {
-                            // Pan del warehouse
+                            // Pan del warehouse con límites
                             e.preventDefault();
                             self.procesarPan(touch.clientX, touch.clientY);
                         }
@@ -1582,7 +1586,7 @@
                     }
                 }, { passive: true });
                 
-                console.log('Sistema completo: arrastre pallets + pan warehouse configurado');
+                console.log('Sistema completo: arrastre pallets + pan warehouse configurado con límites');
             }
 
             cancelarEstados() {
@@ -1608,10 +1612,27 @@
                 const deltaX = clientX - this.pan.startX;
                 const deltaY = clientY - this.pan.startY;
                 
-                this.pan.x = this.pan.initialX + deltaX;
-                this.pan.y = this.pan.initialY + deltaY;
+                // Calcular nueva posición con límites
+                let newX = this.pan.initialX + deltaX;
+                let newY = this.pan.initialY + deltaY;
                 
-                this.aplicarTransformWarehouse();
+                // Obtener dimensiones del warehouse
+                const warehouse = document.getElementById('warehouse');
+                if (warehouse) {
+                    const rect = warehouse.getBoundingClientRect();
+                    
+                    // Límites de pan: no más de 200px en cualquier dirección desde la posición original
+                    const maxPan = 200;
+                    
+                    // Aplicar límites
+                    newX = Math.max(-maxPan, Math.min(maxPan, newX));
+                    newY = Math.max(-maxPan, Math.min(maxPan, newY));
+                    
+                    this.pan.x = newX;
+                    this.pan.y = newY;
+                    
+                    this.aplicarTransformWarehouse();
+                }
             }
 
             finalizarPan() {
@@ -1622,7 +1643,9 @@
 
             aplicarTransformWarehouse() {
                 const warehouse = document.getElementById('warehouse');
-                warehouse.style.transform = `translate(${this.pan.x}px, ${this.pan.y}px)`;
+                if (warehouse) {
+                    warehouse.style.transform = `translate(${this.pan.x}px, ${this.pan.y}px)`;
+                }
             }
 
             iniciarArrastre(elemento, palletId, clientX, clientY) {
