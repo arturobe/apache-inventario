@@ -851,7 +851,9 @@
                     
                     <div class="form-field">
                         <label data-i18n="circumference">Circunferencia</label>
-                        <input type="text" id="search-circunf" placeholder="12">
+                        <select id="search-circunf">
+                            <option value="">Todas las circunferencias</option>
+                        </select>
                     </div>
                     
                     <div class="form-field">
@@ -1182,6 +1184,104 @@
                 };
                 
                 console.log('Sistema enterprise inicializado');
+            }
+
+            // Funciones de conversión decimal ↔ fracción
+            decimalAFraccion(decimal) {
+                if (!decimal || decimal === '') return '';
+                
+                const num = parseFloat(decimal);
+                if (isNaN(num)) return decimal;
+                
+                const entero = Math.floor(num);
+                const fraccionDecimal = num - entero;
+                
+                // Mapeo de decimales comunes a fracciones Unicode
+                const fraccionesComunes = {
+                    0.125: '⅛',
+                    0.25: '¼',
+                    0.375: '⅜',
+                    0.5: '½',
+                    0.625: '⅝',
+                    0.75: '¾',
+                    0.875: '⅞'
+                };
+                
+                // Buscar coincidencia exacta con tolerancia pequeña
+                for (const [dec, frac] of Object.entries(fraccionesComunes)) {
+                    if (Math.abs(fraccionDecimal - parseFloat(dec)) < 0.001) {
+                        return entero === 0 ? frac : entero + frac;
+                    }
+                }
+                
+                // Si no es una fracción común, devolver el decimal original
+                return decimal;
+            }
+
+            fraccionADecimal(fraccionTexto) {
+                if (!fraccionTexto || fraccionTexto === '') return '';
+                
+                // Remover comillas si las tiene
+                let texto = fraccionTexto.replace(/"/g, '');
+                
+                // Mapeo de fracciones Unicode a decimales
+                const fraccionesUnicode = {
+                    '⅛': 0.125,
+                    '¼': 0.25,
+                    '⅜': 0.375,
+                    '½': 0.5,
+                    '⅝': 0.625,
+                    '¾': 0.75,
+                    '⅞': 0.875
+                };
+                
+                // Si es solo una fracción (ej: "½")
+                if (fraccionesUnicode[texto]) {
+                    return fraccionesUnicode[texto].toString();
+                }
+                
+                // Si tiene parte entera + fracción (ej: "2½")
+                let entero = 0;
+                let fraccionChar = '';
+                
+                for (const [frac, val] of Object.entries(fraccionesUnicode)) {
+                    if (texto.includes(frac)) {
+                        fraccionChar = frac;
+                        const parteEntera = texto.replace(frac, '');
+                        entero = parteEntera === '' ? 0 : parseInt(parteEntera);
+                        break;
+                    }
+                }
+                
+                if (fraccionChar !== '') {
+                    const resultado = entero + fraccionesUnicode[fraccionChar];
+                    return resultado.toString();
+                }
+                
+                // Si no contiene fracciones Unicode, devolver como está
+                return texto;
+            }
+
+            configurarCampoCircunferencia(inputElement) {
+                if (!inputElement) return;
+                
+                // Configurar evento blur para convertir entrada a fracción
+                inputElement.addEventListener('blur', (e) => {
+                    const valor = e.target.value.trim();
+                    if (valor) {
+                        const valorFraccion = this.decimalAFraccion(valor);
+                        if (valorFraccion !== valor) {
+                            e.target.value = valorFraccion + '"';
+                        }
+                    }
+                });
+                
+                // Configurar evento focus para facilitar edición
+                inputElement.addEventListener('focus', (e) => {
+                    const valor = e.target.value.replace(/"/g, '');
+                    const valorDecimal = this.fraccionADecimal(valor);
+                    e.target.value = valorDecimal;
+                });
             }
 
             async init() {
@@ -1775,6 +1875,9 @@
                 document.getElementById('btn-cancelar').addEventListener('click', () => {
                     this.cancelarCreacion();
                 });
+
+                // Configurar campo de circunferencia para conversión fraccionaria
+                this.configurarCampoCircunferencia(document.getElementById('circunferencia-nuevo'));
                 
                 modal.classList.add('active');
             }
@@ -1913,6 +2016,11 @@
                         </div>
                     </div>
                 `;
+
+                // Configurar campo de circunferencia para conversión fraccionaria
+                setTimeout(() => {
+                    this.configurarCampoCircunferencia(document.getElementById('circunferencia-editar'));
+                }, 100);
 
                 setTimeout(() => {
                     const btnEditarNombre = document.getElementById('btn-editar-nombre');
@@ -2122,6 +2230,9 @@
                 if (btnEliminar) {
                     btnEliminar.addEventListener('click', () => this.eliminarPallet());
                 }
+
+                // Configurar campo de circunferencia para conversión fraccionaria
+                this.configurarCampoCircunferencia(document.getElementById('circunferencia-agregar'));
             }
 
             configurarEventListenersDespachar() {
@@ -2351,18 +2462,22 @@
                     const nombrePallet = document.getElementById('nombre-pallet-nuevo').value.trim();
                     const tipo = document.getElementById('tipo-material-nuevo').value.trim() || 'Material';
                     const proveedor = document.getElementById('proveedor-nuevo').value.trim() || 'Sin especificar';
-                    const circunf = document.getElementById('circunferencia-nuevo').value.trim();
+                    const circunfInput = document.getElementById('circunferencia-nuevo').value.trim();
                     const espesor = document.getElementById('espesor-nuevo').value.trim();
                     const longitud = document.getElementById('longitud-nuevo').value.trim();
                     const peso = document.getElementById('peso-nuevo').value.trim();
                     const cantidad = parseInt(document.getElementById('cantidad-nuevo').value) || 1;
                     const unidad = document.getElementById('unidad-nuevo').value || 'unidades';
 
+                    // Convertir circunferencia fraccionaria a decimal para almacenamiento
+                    const circunf = this.fraccionADecimal(circunfInput.replace(/"/g, ''));
+
                     const numeroAsignado = await this.obtenerProximoNumero();
                     
                     let descripcion = tipo;
                     if (circunf && espesor) {
-                        descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
+                        const circunfDisplay = this.decimalAFraccion(circunf);
+                        descripcion += ` - ${circunfDisplay}″ ⌀ × ${espesor}″`;
                         if (longitud) descripcion += ` × ${longitud}`;
                         if (peso) descripcion += ` (${peso})`;
                     }
@@ -2787,7 +2902,7 @@
                             }
                         }
                         
-                        if (circunf && (!material.circunferencia || !material.circunferencia.toString().includes(circunf))) coincide = false;
+                        if (circunf && (!material.circunferencia || material.circunferencia.toString().trim() !== circunf)) coincide = false;
                         if (espesor && (!material.espesor || !material.espesor.toString().includes(espesor))) coincide = false;
                         
                         if (coincide) {
@@ -2832,40 +2947,81 @@
             }
 
             actualizarOpcionesBusqueda() {
+                // Actualizar tipos de materiales
                 const datalist = document.getElementById('search-material-types');
-                if (!datalist) return;
-
-                const tiposUnicos = new Set();
-                
-                Object.keys(this.inventario).forEach(palletId => {
-                    const pallet = this.inventario[palletId];
-                    pallet.materiales.forEach(material => {
-                        if (material.tipo && material.tipo.trim()) {
-                            tiposUnicos.add(material.tipo.trim());
-                        }
+                if (datalist) {
+                    const tiposUnicos = new Set();
+                    
+                    Object.keys(this.inventario).forEach(palletId => {
+                        const pallet = this.inventario[palletId];
+                        pallet.materiales.forEach(material => {
+                            if (material.tipo && material.tipo.trim()) {
+                                tiposUnicos.add(material.tipo.trim());
+                            }
+                        });
                     });
-                });
 
-                const opcionesBase = [
-                    'Lámina de Acero', 'Strap', 'Codo 90°', 'Codo 45°', 'Tubería', 'Accesorio',
-                    'Lamina', 'Fleje', 'Plancha', 'Varilla', 'Perfil', 'Soldadura'
-                ];
+                    const opcionesBase = [
+                        'Lámina de Acero', 'Strap', 'Codo 90°', 'Codo 45°', 'Tubería', 'Accesorio',
+                        'Lamina', 'Fleje', 'Plancha', 'Varilla', 'Perfil', 'Soldadura'
+                    ];
 
-                opcionesBase.forEach(tipo => tiposUnicos.add(tipo));
+                    opcionesBase.forEach(tipo => tiposUnicos.add(tipo));
 
-                datalist.innerHTML = '<option value=""></option>';
-                
-                const tiposOrdenados = Array.from(tiposUnicos).sort((a, b) => 
-                    a.toLowerCase().localeCompare(b.toLowerCase())
-                );
+                    datalist.innerHTML = '<option value=""></option>';
+                    
+                    const tiposOrdenados = Array.from(tiposUnicos).sort((a, b) => 
+                        a.toLowerCase().localeCompare(b.toLowerCase())
+                    );
 
-                tiposOrdenados.forEach(tipo => {
-                    const option = document.createElement('option');
-                    option.value = tipo;
-                    datalist.appendChild(option);
-                });
+                    tiposOrdenados.forEach(tipo => {
+                        const option = document.createElement('option');
+                        option.value = tipo;
+                        datalist.appendChild(option);
+                    });
+                }
 
-                console.log('Opciones de búsqueda actualizadas:', tiposUnicos.size, 'tipos únicos');
+                // Actualizar circunferencias con representación fraccionaria
+                const selectCircunf = document.getElementById('search-circunf');
+                if (selectCircunf) {
+                    const circunferenciasUnicas = new Set();
+                    
+                    Object.keys(this.inventario).forEach(palletId => {
+                        const pallet = this.inventario[palletId];
+                        pallet.materiales.forEach(material => {
+                            if (material.circunferencia && material.circunferencia.toString().trim()) {
+                                circunferenciasUnicas.add(material.circunferencia.toString().trim());
+                            }
+                        });
+                    });
+
+                    // Limpiar opciones existentes excepto la primera
+                    selectCircunf.innerHTML = `<option value="">${currentLanguage === 'es' ? 'Todas las circunferencias' : 'All circumferences'}</option>`;
+                    
+                    // Convertir a array y ordenar numéricamente
+                    const circunferenciasOrdenadas = Array.from(circunferenciasUnicas).sort((a, b) => {
+                        const numA = parseFloat(this.fraccionADecimal(a));
+                        const numB = parseFloat(this.fraccionADecimal(b));
+                        // Si ambos son números, ordenar numéricamente
+                        if (!isNaN(numA) && !isNaN(numB)) {
+                            return numA - numB;
+                        }
+                        // Si no, ordenar alfabéticamente
+                        return a.localeCompare(b);
+                    });
+
+                    circunferenciasOrdenadas.forEach(circunf => {
+                        const option = document.createElement('option');
+                        option.value = circunf;
+                        const fraccionVisual = this.decimalAFraccion(circunf);
+                        option.textContent = fraccionVisual + '"';
+                        selectCircunf.appendChild(option);
+                    });
+
+                    console.log('Circunferencias actualizadas:', circunferenciasUnicas.size, 'valores únicos');
+                }
+
+                console.log('Opciones de búsqueda actualizadas');
             }
 
             async resetearSistema() {
