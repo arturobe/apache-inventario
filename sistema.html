@@ -3340,6 +3340,50 @@
                 this.mostrarNotificacion(`${numeros.length} números ocupados. Ver consola para detalles.`, 'info');
             }
 
+            async eliminarPalletVacio(palletId) {
+                try {
+                    const confirmText = `¿ESTÁS SEGURO? Esto eliminará el pallet P${palletId} y liberará su número para reutilizar.`;
+                        
+                    if (!confirm(confirmText)) {
+                        return;
+                    }
+                    
+                    console.log(`Eliminando pallet vacío P${palletId}...`);
+                    
+                    // Eliminar de la base de datos si está online
+                    if (this.isOnline && this.supabase) {
+                        const { error } = await this.supabase
+                            .from('pallets')
+                            .delete()
+                            .eq('numero', parseInt(palletId));
+                        
+                        if (error) throw error;
+                        console.log(`Pallet P${palletId} eliminado de la base de datos`);
+                    }
+                    
+                    // Eliminar del inventario local
+                    delete this.inventario[palletId];
+                    
+                    // Eliminar elemento visual
+                    const palletElement = document.querySelector(`[data-pallet="${palletId}"]`);
+                    if (palletElement) {
+                        palletElement.remove();
+                        console.log(`Elemento visual del pallet P${palletId} eliminado`);
+                    }
+                    
+                    // Actualizar estadísticas y cerrar modal
+                    this.actualizarEstadisticas();
+                    this.cerrarModal();
+                    
+                    this.mostrarNotificacion(`Pallet P${palletId} eliminado. Número liberado para reutilizar.`, 'success');
+                    console.log(`Pallet P${palletId} eliminado exitosamente`);
+                    
+                } catch (error) {
+                    console.error('Error eliminando pallet vacío:', error);
+                    this.mostrarNotificacion('Error al eliminar pallet: ' + error.message, 'error');
+                }
+            }
+
             configurarSincronizacion() {
                 if (!this.supabase || !this.isOnline) return;
                 
