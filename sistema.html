@@ -2106,10 +2106,11 @@
             }
 
             generarVistaEditar(datos) {
-                const materialesHTML = datos.materiales.map((item) => {
+                const materialesHTML = datos.materiales.map((item, index) => {
                     const fecha = new Date(item.fecha);
+                    const materialId = item.id || `temp_${index}`;
                     return `
-                        <div class="material-card" id="material-${item.id}">
+                        <div class="material-card" id="material-${materialId}">
                             <div class="material-header">
                                 <div>
                                     <div class="material-title">${item.descripcion || item.tipo}</div>
@@ -2124,10 +2125,10 @@
                             </div>
                             <div class="dispatch-controls">
                                 <div class="button-group" style="margin: 0; gap: 8px; justify-content: flex-start;">
-                                    <button class="action-button secondary" style="min-width: auto; height: 36px; padding: 8px 12px; font-size: 14px;" onclick="window.sistemaInventario.editarMaterial('${item.id}')">
+                                    <button class="action-button secondary" style="min-width: auto; height: 36px; padding: 8px 12px; font-size: 14px;" data-material-index="${index}" onclick="window.sistemaInventario.editarMaterialPorIndice(${index})">
                                         ${t('edit_material')}
                                     </button>
-                                    <button class="action-button danger" style="min-width: auto; height: 36px; padding: 8px 12px; font-size: 14px;" onclick="window.sistemaInventario.eliminarMaterial('${item.id}')">
+                                    <button class="action-button danger" style="min-width: auto; height: 36px; padding: 8px 12px; font-size: 14px;" data-material-index="${index}" onclick="window.sistemaInventario.eliminarMaterialPorIndice(${index})">
                                         ${t('delete_material')}
                                     </button>
                                 </div>
