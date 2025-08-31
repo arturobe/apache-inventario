@@ -1324,6 +1324,7 @@
                     btnProbar.addEventListener('click', () => this.probarConexion());
                 }
 
+                // Configurar tabs del modal
                 const tabInventario = document.getElementById('tab-inventario');
                 const tabAgregar = document.getElementById('tab-agregar');
                 const tabEditar = document.getElementById('tab-editar');
@@ -1968,7 +1969,7 @@
                             <h4>${t('quantity_measures')}</h4>
                             <div class="form-grid cols-2">
                                 <div class="form-group">
-                                    <label>${t('quantity_received')}</label>
+                                    <label>${t('quantity_to_add')}</label>
                                     <input type="number" id="cantidad-agregar" placeholder="100" required min="1" step="1">
                                 </div>
                                 <div class="form-group">
@@ -1997,7 +1998,7 @@
             }
 
             generarVistaEditar(datos) {
-                const materialesHTML = datos.materiales.map((item, index) => {
+                const materialesHTML = datos.materiales.map((item) => {
                     const fecha = new Date(item.fecha);
                     return `
                         <div class="material-card" id="material-${item.id}">
