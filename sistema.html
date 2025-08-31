@@ -1182,7 +1182,8 @@
                     dragStarted: false,
                     touchStartTime: 0,
                     startX: 0,
-                    startY: 0
+                    startY: 0,
+                    hasMoved: false
                 };
                 
                 console.log('Sistema enterprise inicializado');
@@ -1451,6 +1452,7 @@
             configurarSistemaArrastre() {
                 const self = this;
                 
+                // Arrastre con mouse
                 document.addEventListener('mousemove', function(e) {
                     if (self.arrastre.activo && self.arrastre.dragStarted) {
                         self.procesarMovimiento(e.clientX, e.clientY);
@@ -1463,18 +1465,21 @@
                     }
                 }, { passive: true });
 
+                // Arrastre touch optimizado y fluido
                 document.addEventListener('touchstart', function(e) {
                     if (e.touches.length === 1) {
                         const touch = e.touches[0];
                         const element = document.elementFromPoint(touch.clientX, touch.clientY);
                         
                         if (element && element.classList.contains('pallet') && !element.classList.contains('temporal')) {
+                            // Iniciar arrastre inmediatamente sin delay
                             self.arrastre.startX = touch.clientX;
                             self.arrastre.startY = touch.clientY;
                             self.arrastre.touchStartTime = Date.now();
                             self.arrastre.potentialElement = element;
                             self.arrastre.potentialPalletId = element.dataset.pallet;
                             self.arrastre.dragStarted = false;
+                            self.arrastre.hasMoved = false;
                         }
                     }
                 }, { passive: true });
@@ -1484,11 +1489,13 @@
                         const touch = e.touches[0];
                         const deltaX = Math.abs(touch.clientX - self.arrastre.startX);
                         const deltaY = Math.abs(touch.clientY - self.arrastre.startY);
-                        const timeDelta = Date.now() - self.arrastre.touchStartTime;
+                        const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                         
-                        if (timeDelta > 300 && deltaX > 20 && deltaX > deltaY * 2 && !self.arrastre.dragStarted) {
+                        // Iniciar arrastre con movimiento mínimo (5px) y sin delay
+                        if (totalMovement > 5 && !self.arrastre.dragStarted) {
                             e.preventDefault();
                             self.arrastre.dragStarted = true;
+                            self.arrastre.hasMoved = true;
                             self.iniciarArrastre(
                                 self.arrastre.potentialElement, 
                                 self.arrastre.potentialPalletId, 
@@ -1496,7 +1503,9 @@
                                 touch.clientY
                             );
                         } else if (self.arrastre.dragStarted) {
+                            // Continuar arrastre fluido
                             e.preventDefault();
+                            self.arrastre.hasMoved = true;
                             self.procesarMovimiento(touch.clientX, touch.clientY);
                         }
                     }
@@ -1505,19 +1514,22 @@
                 document.addEventListener('touchend', function(e) {
                     if (self.arrastre.dragStarted) {
                         self.finalizarArrastre();
-                    } else if (self.arrastre.potentialElement) {
+                    } else if (self.arrastre.potentialElement && !self.arrastre.hasMoved) {
+                        // Solo abrir modal si no hubo movimiento (click/tap real)
                         const timeDelta = Date.now() - self.arrastre.touchStartTime;
-                        if (timeDelta < 300) {
+                        if (timeDelta < 200) { // Tap rápido
                             self.abrirModalGestion(self.arrastre.potentialPalletId);
                         }
                     }
                     
+                    // Reset completo del estado
                     self.arrastre.potentialElement = null;
                     self.arrastre.potentialPalletId = null;
                     self.arrastre.dragStarted = false;
+                    self.arrastre.hasMoved = false;
                 }, { passive: true });
                 
-                console.log('Sistema de arrastre configurado con scroll fluido optimizado');
+                console.log('Sistema de arrastre optimizado - fluido y sin interrupciones');
             }
 
             iniciarArrastre(elemento, palletId, clientX, clientY) {
@@ -1603,7 +1615,8 @@
                         startX: 0,
                         startY: 0,
                         potentialElement: null,
-                        potentialPalletId: null
+                        potentialPalletId: null,
+                        hasMoved: false
                     };
                 }
             }
