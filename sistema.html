@@ -281,6 +281,18 @@
             border-color: var(--steel);
         }
 
+        .pallet.empty {
+            background: var(--grey);
+            border-color: var(--medium-grey);
+            opacity: 0.7;
+            font-size: 12px;
+        }
+
+        .pallet.empty:hover {
+            background: var(--steel);
+            opacity: 1;
+        }
+
         .pallet.temporal {
             background: var(--steel);
             animation: modernPulse 2s ease-in-out infinite;
@@ -1653,65 +1665,82 @@
                 try {
                     if (!this.supabase || !this.isOnline) return;
 
-                    const { data: materiales, error } = await this.supabase
+                    // PASO 1: Cargar TODOS los pallets existentes (incluso vacíos)
+                    const { data: todosLosPallets, error: errorPallets } = await this.supabase
+                        .from('pallets')
+                        .select('numero, posicion_x, posicion_y, created_at, paquete_numero, nombre_personalizado')
+                        .order('numero', { ascending: true });
+
+                    if (errorPallets) throw errorPallets;
+
+                    // PASO 2: Cargar materiales activos
+                    const { data: materiales, error: errorMateriales } = await this.supabase
                         .from('materiales')
-                        .select('*, pallets!inner (numero, posicion_x, posicion_y, created_at, paquete_numero, nombre_personalizado)')
+                        .select('*, pallets!inner (numero)')
                         .eq('activo', true)
                         .order('fecha_recepcion', { ascending: false });
 
-                    if (error) throw error;
+                    if (errorMateriales) throw errorMateriales;
 
                     this.inventario = {};
 
-                    if (materiales && materiales.length > 0) {
-                        const palletsMap = new Map();
-                        
-                        materiales.forEach(material => {
-                            const palletNum = material.pallets.numero;
-                            
-                            if (!palletsMap.has(palletNum)) {
-                                palletsMap.set(palletNum, {
-                                    materiales: [],
-                                    total: 0,
-                                    created: material.pallets.created_at,
-                                    posicion: {
-                                        x: material.pallets.posicion_x || 50,
-                                        y: material.pallets.posicion_y || 50
-                                    },
-                                    paqueteNumero: material.pallets.paquete_numero,
-                                    nombrePersonalizado: material.pallets.nombre_personalizado
-                                });
-                            }
-
-                            palletsMap.get(palletNum).materiales.push({
-                                id: material.id,
-                                tipo: material.tipo,
-                                circunferencia: material.circunferencia,
-                                espesor: material.espesor,
-                                descripcion: material.descripcion_completa,
-                                cantidad: material.cantidad,
-                                unidad: material.unidad,
-                                proveedor: material.proveedor,
-                                fecha: material.fecha_recepcion
-                            });
-                        });
-
-                        palletsMap.forEach((data, palletNum) => {
-                            data.total = data.materiales.reduce((sum, m) => sum + m.cantidad, 0);
-                            this.inventario[palletNum] = data;
+                    // PASO 3: Crear entrada para TODOS los pallets
+                    if (todosLosPallets && todosLosPallets.length > 0) {
+                        todosLosPallets.forEach(pallet => {
+                            this.inventario[pallet.numero] = {
+                                materiales: [],
+                                total: 0,
+                                created: pallet.created_at,
+                                posicion: {
+                                    x: pallet.posicion_x || 50,
+                                    y: pallet.posicion_y || 50
+                                },
+                                paqueteNumero: pallet.paquete_numero,
+                                nombrePersonalizado: pallet.nombre_personalizado
+                            };
                         });
                     }
 
-                    this.renderizarPalletsVisuales();
+                    // PASO 4: Agregar materiales a sus respectivos pallets
+                    if (materiales && materiales.length > 0) {
+                        materiales.forEach(material => {
+                            const palletNum = material.pallets.numero;
+                            
+                            if (this.inventario[palletNum]) {
+                                this.inventario[palletNum].materiales.push({
+                                    id: material.id,
+                                    tipo: material.tipo,
+                                    circunferencia: material.circunferencia,
+                                    espesor: material.espesor,
+                                    descripcion: material.descripcion_completa,
+                                    cantidad: material.cantidad,
+                                    unidad: material.unidad,
+                                    proveedor: material.proveedor,
+                                    fecha: material.fecha_recepcion
+                                });
+                            }
+                        });
+                    }
+
+                    // PASO 5: Calcular totales y renderizar TODOS los pallets
+                    Object.keys(this.inventario).forEach(palletNum => {
+                        const datos = this.inventario[palletNum];
+                        datos.total = datos.materiales.reduce((sum, m) => sum + m.cantidad, 0);
+                    });
+
+                    this.renderizarTodosLosPallets();
                     this.actualizarOpcionesBusqueda();
-                    console.log('Inventario cargado:', (materiales?.length || 0), 'materiales');
+                    
+                    console.log('TODOS los pallets cargados:', todosLosPallets?.length || 0, 'pallets totales');
+                    console.log('Con materiales activos:', (materiales?.length || 0), 'materiales');
+                    console.log('Números ocupados:', Object.keys(this.inventario).sort((a,b) => parseInt(a) - parseInt(b)));
 
                 } catch (error) {
-                    console.error('Error cargando inventario:', error);
+                    console.error('Error cargando inventario completo:', error);
                 }
             }
 
-            renderizarPalletsVisuales() {
+            renderizarTodosLosPallets() {
                 const warehouse = document.getElementById('warehouse');
                 if (!warehouse) return;
 
@@ -1720,12 +1749,19 @@
 
                 Object.keys(this.inventario).forEach(function(palletId) {
                     const datos = self.inventario[palletId];
+                    
+                    // Renderizar TODOS los pallets - con inventario Y vacíos
                     if (datos.total > 0) {
+                        // Pallets con inventario - color normal
                         self.crearPalletVisual(palletId, datos.posicion.x, datos.posicion.y, 'occupied');
+                    } else {
+                        // Pallets vacíos - color diferente para identificarlos
+                        self.crearPalletVisual(palletId, datos.posicion.x, datos.posicion.y, 'empty');
                     }
                 });
 
-                console.log('Pallets renderizados:', Object.keys(this.inventario).length);
+                console.log('TODOS los pallets renderizados:', Object.keys(this.inventario).length);
+                console.log('Números ocupados:', Object.keys(this.inventario).sort((a,b) => parseInt(a) - parseInt(b)));
             }
 
             crearPalletVisual(palletId, x, y, tipo) {
@@ -1742,10 +1778,12 @@
                 pallet.style.left = safeX + 'px';
                 pallet.style.top = safeY + 'px';
                 
-                if (tipo !== 'temporal') {
-                    pallet.title = 'Pallet P' + palletId + ' - ' + t('pallet_drag_manage');
-                } else {
+                if (tipo === 'temporal') {
                     pallet.title = t('new_pallet_click');
+                } else if (tipo === 'empty') {
+                    pallet.title = 'Pallet P' + palletId + ' - VACÍO (Click para gestionar o eliminar)';
+                } else {
+                    pallet.title = 'Pallet P' + palletId + ' - ' + t('pallet_drag_manage');
                 }
 
                 const self = this;
@@ -1755,6 +1793,8 @@
                         e.stopPropagation();
                         if (tipo === 'temporal') {
                             self.abrirModalCreacion(safeX, safeY);
+                        } else if (tipo === 'empty') {
+                            self.abrirModalPalletVacio(palletId);
                         } else {
                             self.abrirModalGestion(palletId);
                         }
@@ -3230,9 +3270,74 @@
                 }
             }
 
+            abrirModalPalletVacio(palletId) {
+                const modal = document.getElementById('modal');
+                const title = document.getElementById('modal-title');
+                const content = document.getElementById('modal-content');
+                const nav = document.getElementById('section-nav');
+                
+                title.textContent = `Gestión Pallet P${palletId} - VACÍO`;
+                nav.style.display = 'none';
+                
+                content.innerHTML = `
+                    <div class="form-section">
+                        <h4>Pallet Vacío - Sin Inventario</h4>
+                        
+                        <div style="background: var(--light-grey); border: 1px solid var(--medium-grey); border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;">
+                            <div style="font-size: 18px; font-weight: 600; color: var(--steel); margin-bottom: 16px;">
+                                El pallet P${palletId} no tiene materiales pero ocupa este número
+                            </div>
+                            <div style="color: var(--grey); font-size: 14px; margin-bottom: 20px;">
+                                Puedes eliminar este pallet para liberar el número P${palletId} y poder reutilizarlo
+                            </div>
+                        </div>
+
+                        <div class="form-grid cols-2">
+                            <div class="form-group">
+                                <label>Paquete #</label>
+                                <input type="text" id="paquete-vacio" value="${this.inventario[palletId]?.paqueteNumero || ''}" placeholder="Información adicional">
+                            </div>
+                            <div class="form-group">
+                                <label>Nombre</label>
+                                <input type="text" id="nombre-vacio" value="${this.inventario[palletId]?.nombrePersonalizado || ''}" placeholder="Nombre personalizado">
+                            </div>
+                        </div>
+
+                        <div class="button-group">
+                            <button class="action-button primary" onclick="window.sistemaInventario.abrirModalCreacion(${this.inventario[palletId]?.posicion?.x || 100}, ${this.inventario[palletId]?.posicion?.y || 100}); window.sistemaInventario.cerrarModal();">
+                                Agregar Materiales
+                            </button>
+                            <button class="action-button secondary" onclick="window.sistemaInventario.mostrarSeccion('renombrar'); window.sistemaInventario.palletActual = '${palletId}';">
+                                Renombrar/Renumerar
+                            </button>
+                            <button class="action-button danger" onclick="window.sistemaInventario.eliminarPalletVacio('${palletId}')">
+                                Eliminar y Liberar Número
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                modal.classList.add('active');
+            }
+
             // Función para obtener todos los números ocupados
             obtenerNumerosOcupados() {
                 return Object.keys(this.inventario).map(id => parseInt(id)).sort((a, b) => a - b);
+            }
+
+            // Función para mostrar todos los números ocupados (debugging)
+            mostrarNumerosOcupados() {
+                const numeros = this.obtenerNumerosOcupados();
+                console.log('=== NÚMEROS DE PALLETS OCUPADOS ===');
+                console.log('Total pallets en sistema:', numeros.length);
+                console.log('Números ocupados:', numeros.join(', '));
+                
+                const vacios = numeros.filter(num => this.inventario[num].total === 0);
+                if (vacios.length > 0) {
+                    console.log('Pallets vacíos (puedes eliminar):', vacios.join(', '));
+                }
+                
+                this.mostrarNotificacion(`${numeros.length} números ocupados. Ver consola para detalles.`, 'info');
             }
 
             configurarSincronizacion() {
