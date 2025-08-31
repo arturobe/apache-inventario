@@ -2736,18 +2736,41 @@
 
             async procesarCreacionPallet(posX, posY) {
                 try {
-                    const numeroPersonalizado = parseInt(document.getElementById('numero-pallet-nuevo').value);
-                    const paqueteNumero = document.getElementById('paquete-numero-nuevo').value.trim();
-                    const nombrePallet = document.getElementById('nombre-pallet-nuevo').value.trim();
-                    const tipo = document.getElementById('tipo-material-nuevo').value.trim() || 'Material';
-                    const proveedor = document.getElementById('proveedor-nuevo').value.trim() || 'Sin especificar';
-                    const circunfAInput = document.getElementById('circunferencia-a-nuevo').value.trim();
-                    const circunfBInput = document.getElementById('circunferencia-b-nuevo').value.trim();
-                    const espesor = document.getElementById('espesor-nuevo').value.trim();
-                    const longitud = document.getElementById('longitud-nuevo').value.trim();
-                    const peso = document.getElementById('peso-nuevo').value.trim();
-                    const cantidad = parseInt(document.getElementById('cantidad-nuevo').value) || 1;
-                    const unidad = document.getElementById('unidad-nuevo').value || 'unidades';
+                    const numeroPersonalizadoElement = document.getElementById('numero-pallet-nuevo');
+                    const numeroPersonalizado = numeroPersonalizadoElement ? parseInt(numeroPersonalizadoElement.value) : null;
+                    
+                    const paqueteNumeroElement = document.getElementById('paquete-numero-nuevo');
+                    const paqueteNumero = paqueteNumeroElement ? paqueteNumeroElement.value.trim() : '';
+                    
+                    const nombrePalletElement = document.getElementById('nombre-pallet-nuevo');
+                    const nombrePallet = nombrePalletElement ? nombrePalletElement.value.trim() : '';
+                    
+                    const tipoElement = document.getElementById('tipo-material-nuevo');
+                    const tipo = tipoElement ? tipoElement.value.trim() || 'Material' : 'Material';
+                    
+                    const proveedorElement = document.getElementById('proveedor-nuevo');
+                    const proveedor = proveedorElement ? proveedorElement.value.trim() || 'Sin especificar' : 'Sin especificar';
+                    
+                    const circunfAElement = document.getElementById('circunferencia-a-nuevo');
+                    const circunfAInput = circunfAElement ? circunfAElement.value.trim() : '';
+                    
+                    const circunfBElement = document.getElementById('circunferencia-b-nuevo');
+                    const circunfBInput = circunfBElement ? circunfBElement.value.trim() : '';
+                    
+                    const espesorElement = document.getElementById('espesor-nuevo');
+                    const espesor = espesorElement ? espesorElement.value.trim() : '';
+                    
+                    const longitudElement = document.getElementById('longitud-nuevo');
+                    const longitud = longitudElement ? longitudElement.value.trim() : '';
+                    
+                    const pesoElement = document.getElementById('peso-nuevo');
+                    const peso = pesoElement ? pesoElement.value.trim() : '';
+                    
+                    const cantidadElement = document.getElementById('cantidad-nuevo');
+                    const cantidad = cantidadElement ? parseInt(cantidadElement.value) || 1 : 1;
+                    
+                    const unidadElement = document.getElementById('unidad-nuevo');
+                    const unidad = unidadElement ? unidadElement.value || 'unidades' : 'unidades';
 
                     // Determinar número a usar
                     let numeroAsignado;
@@ -2934,9 +2957,14 @@
 
             async procesarRenombrePallet() {
                 try {
-                    const nuevoNumero = parseInt(document.getElementById('numero-pallet-edit').value) || this.palletActual;
-                    const paqueteNumero = document.getElementById('paquete-numero-edit').value.trim();
-                    const nombrePallet = document.getElementById('nombre-pallet-edit').value.trim();
+                    const numeroElement = document.getElementById('numero-pallet-edit');
+                    const nuevoNumero = numeroElement ? parseInt(numeroElement.value) || this.palletActual : this.palletActual;
+                    
+                    const paqueteElement = document.getElementById('paquete-numero-edit');
+                    const paqueteNumero = paqueteElement ? paqueteElement.value.trim() : '';
+                    
+                    const nombreElement = document.getElementById('nombre-pallet-edit');
+                    const nombrePallet = nombreElement ? nombreElement.value.trim() : '';
                     
                     // Validar que el número no esté repetido (excepto si es el mismo pallet)
                     if (nuevoNumero != this.palletActual && this.inventario[nuevoNumero]) {
