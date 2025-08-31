@@ -1806,7 +1806,12 @@
                 content.innerHTML = `
                     <div class="form-section">
                         <h4>${t('pallet_info')}</h4>
-                        <div class="form-grid cols-2">
+                        <div class="form-grid cols-3">
+                            <div class="form-group">
+                                <label>Número de Pallet</label>
+                                <input type="number" id="numero-pallet-nuevo" placeholder="Auto" min="1">
+                                <small style="color: var(--grey); font-size: 12px;">Déjalo vacío para auto-asignar</small>
+                            </div>
                             <div class="form-group">
                                 <label>${t('package_number')}</label>
                                 <input type="text" id="paquete-numero-nuevo" placeholder="PAQ-001" required>
@@ -2220,7 +2225,12 @@
                     <div class="form-section">
                         <h4>${t('rename_pallet')} P${this.palletActual}</h4>
                         
-                        <div class="form-grid cols-2">
+                        <div class="form-grid cols-3">
+                            <div class="form-group">
+                                <label>Número de Pallet</label>
+                                <input type="number" id="numero-pallet-edit" value="${this.palletActual}" placeholder="1" min="1" required>
+                                <small style="color: var(--grey); font-size: 12px;">Puedes cambiar a cualquier número disponible</small>
+                            </div>
                             <div class="form-group">
                                 <label>${t('package_number')}</label>
                                 <input type="text" id="paquete-numero-edit" value="${datos.paqueteNumero || ''}" placeholder="PAQ-001">
@@ -2726,6 +2736,7 @@
 
             async procesarCreacionPallet(posX, posY) {
                 try {
+                    const numeroPersonalizado = parseInt(document.getElementById('numero-pallet-nuevo').value);
                     const paqueteNumero = document.getElementById('paquete-numero-nuevo').value.trim();
                     const nombrePallet = document.getElementById('nombre-pallet-nuevo').value.trim();
                     const tipo = document.getElementById('tipo-material-nuevo').value.trim() || 'Material';
@@ -2738,11 +2749,25 @@
                     const cantidad = parseInt(document.getElementById('cantidad-nuevo').value) || 1;
                     const unidad = document.getElementById('unidad-nuevo').value || 'unidades';
 
+                    // Determinar número a usar
+                    let numeroAsignado;
+                    if (numeroPersonalizado && numeroPersonalizado > 0) {
+                        // Validar que no esté repetido
+                        if (this.inventario[numeroPersonalizado]) {
+                            this.mostrarNotificacion(`El número de pallet ${numeroPersonalizado} ya está en uso`, 'error');
+                            return;
+                        }
+                        numeroAsignado = numeroPersonalizado;
+                        console.log('Usando número personalizado:', numeroAsignado);
+                    } else {
+                        // Auto-asignar el próximo disponible
+                        numeroAsignado = await this.obtenerProximoNumero();
+                        console.log('Número auto-asignado:', numeroAsignado);
+                    }
+
                     // Convertir circunferencias fraccionarias a decimal para almacenamiento
                     const circunfA = this.fraccionADecimal(circunfAInput.replace(/"/g, ''));
                     const circunfB = this.fraccionADecimal(circunfBInput.replace(/"/g, ''));
-
-                    const numeroAsignado = await this.obtenerProximoNumero();
                     
                     let descripcion = tipo;
                     if (circunfA && espesor) {
@@ -2909,13 +2934,25 @@
 
             async procesarRenombrePallet() {
                 try {
+                    const nuevoNumero = parseInt(document.getElementById('numero-pallet-edit').value) || this.palletActual;
                     const paqueteNumero = document.getElementById('paquete-numero-edit').value.trim();
                     const nombrePallet = document.getElementById('nombre-pallet-edit').value.trim();
                     
+                    // Validar que el número no esté repetido (excepto si es el mismo pallet)
+                    if (nuevoNumero != this.palletActual && this.inventario[nuevoNumero]) {
+                        this.mostrarNotificacion(`El número de pallet ${nuevoNumero} ya está en uso`, 'error');
+                        return;
+                    }
+                    
+                    const numeroAnterior = this.palletActual;
+                    const datosActuales = this.inventario[this.palletActual];
+                    
                     if (this.isOnline && this.supabase) {
+                        // Actualizar número en base de datos
                         const { error } = await this.supabase
                             .from('pallets')
                             .update({
+                                numero: nuevoNumero,
                                 paquete_numero: paqueteNumero || null,
                                 nombre_personalizado: nombrePallet || null
                             })
@@ -2924,10 +2961,43 @@
                         if (error) throw error;
                     }
                     
-                    this.inventario[this.palletActual].paqueteNumero = paqueteNumero || null;
-                    this.inventario[this.palletActual].nombrePersonalizado = nombrePallet || null;
+                    // Si cambió el número, reorganizar inventario local
+                    if (nuevoNumero != numeroAnterior) {
+                        // Mover datos al nuevo número
+                        this.inventario[nuevoNumero] = {
+                            ...datosActuales,
+                            paqueteNumero: paqueteNumero || null,
+                            nombrePersonalizado: nombrePallet || null
+                        };
+                        
+                        // Eliminar entrada anterior
+                        delete this.inventario[numeroAnterior];
+                        
+                        // Actualizar elemento visual
+                        const palletElement = document.querySelector(`[data-pallet="${numeroAnterior}"]`);
+                        if (palletElement) {
+                            palletElement.dataset.pallet = nuevoNumero;
+                            palletElement.textContent = nuevoNumero;
+                            palletElement.title = 'Pallet P' + nuevoNumero + ' - ' + t('pallet_drag_manage');
+                        }
+                        
+                        // Actualizar pallet actual para el modal
+                        this.palletActual = nuevoNumero.toString();
+                        
+                        // Actualizar título del modal
+                        const title = document.getElementById('modal-title');
+                        title.textContent = t('pallet_management') + ' P' + nuevoNumero;
+                        
+                        console.log(`Pallet renumerado de P${numeroAnterior} a P${nuevoNumero}`);
+                    } else {
+                        // Solo actualizar nombres sin cambiar número
+                        this.inventario[this.palletActual].paqueteNumero = paqueteNumero || null;
+                        this.inventario[this.palletActual].nombrePersonalizado = nombrePallet || null;
+                    }
                     
+                    this.actualizarNavegacionModal(this.palletActual);
                     this.mostrarSeccion('inventario');
+                    this.actualizarEstadisticas();
                     this.mostrarNotificacion(t('pallet_renamed_success'), 'success');
                     
                 } catch (error) {
@@ -3089,7 +3159,10 @@
             }
 
             async obtenerProximoNumero() {
+                // Función simplificada que encuentra el próximo número disponible sin restricciones
                 try {
+                    let numerosExistentes = [];
+                    
                     if (this.isOnline && this.supabase) {
                         const { data: pallets, error } = await this.supabase
                             .from('pallets')
@@ -3097,35 +3170,42 @@
                             .order('numero', { ascending: true });
                         
                         if (error) throw error;
-                        
-                        if (!pallets || pallets.length === 0) return 1;
-                        
-                        const numeros = pallets.map(p => p.numero).sort((a, b) => a - b);
-                        
-                        for (let i = 1; i <= numeros.length + 1; i++) {
-                            if (!numeros.includes(i)) {
-                                return i;
-                            }
-                        }
-                        
-                        return Math.max(...numeros) + 1;
+                        numerosExistentes = pallets ? pallets.map(p => p.numero) : [];
                     } else {
-                        const numerosExistentes = Object.keys(this.inventario).map(id => parseInt(id)).sort((a, b) => a - b);
-                        
-                        if (numerosExistentes.length === 0) return 1;
-                        
-                        for (let i = 1; i <= numerosExistentes.length + 1; i++) {
-                            if (!numerosExistentes.includes(i)) {
-                                return i;
-                            }
-                        }
-                        
-                        return Math.max(...numerosExistentes) + 1;
+                        numerosExistentes = Object.keys(this.inventario).map(id => parseInt(id));
                     }
+                    
+                    // Buscar el primer número disponible empezando desde 1
+                    for (let i = 1; i <= 999999; i++) {
+                        if (!numerosExistentes.includes(i)) {
+                            return i;
+                        }
+                    }
+                    
+                    // Fallback: último número + 1
+                    return Math.max(0, ...numerosExistentes) + 1;
+                    
                 } catch (error) {
                     console.error('Error obteniendo próximo número:', error);
-                    return Object.keys(this.inventario).length + 1;
+                    // Fallback local
+                    const numerosLocales = Object.keys(this.inventario).map(id => parseInt(id));
+                    for (let i = 1; i <= 999999; i++) {
+                        if (!numerosLocales.includes(i)) {
+                            return i;
+                        }
+                    }
+                    return numerosLocales.length + 1;
                 }
+            }
+
+            // Función para validar si un número está disponible
+            validarNumeroDisponible(numero) {
+                return !this.inventario[numero];
+            }
+
+            // Función para obtener todos los números ocupados
+            obtenerNumerosOcupados() {
+                return Object.keys(this.inventario).map(id => parseInt(id)).sort((a, b) => a - b);
             }
 
             configurarSincronizacion() {
