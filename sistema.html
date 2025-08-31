@@ -964,6 +964,7 @@
                 quantity_received: 'Cantidad Recibida',
                 unit_measure: 'Unidad de Medida',
                 linear_feet: 'Pies Lineales',
+                inches: 'Pulgadas',
                 pieces: 'Piezas',
                 meters: 'Metros',
                 kilograms: 'Kilogramos',
@@ -1064,6 +1065,7 @@
                 quantity_received: 'Quantity Received',
                 unit_measure: 'Unit of Measure',
                 linear_feet: 'Linear Feet',
+                inches: 'Inches',
                 pieces: 'Pieces',
                 meters: 'Meters',
                 kilograms: 'Kilograms',
@@ -1672,6 +1674,7 @@
                                 id: material.id,
                                 tipo: material.tipo,
                                 circunferencia: material.circunferencia,
+                                circunferencia_b: material.circunferencia_b,
                                 espesor: material.espesor,
                                 descripcion: material.descripcion_completa,
                                 cantidad: material.cantidad,
@@ -1877,7 +1880,8 @@
                 });
 
                 // Configurar campo de circunferencia para conversión fraccionaria
-                this.configurarCampoCircunferencia(document.getElementById('circunferencia-nuevo'));
+                this.configurarCampoCircunferencia(document.getElementById('circunferencia-a-nuevo'));
+                this.configurarCampoCircunferencia(document.getElementById('circunferencia-b-nuevo'));
                 
                 modal.classList.add('active');
             }
@@ -2050,8 +2054,12 @@
                             <h4>${t('technical_specs')}</h4>
                             <div class="form-grid cols-4">
                                 <div class="form-group">
-                                    <label>${t('circumference')}</label>
-                                    <input type="text" id="circunferencia-agregar" placeholder="12.0&quot;">
+                                    <label>${t('circumference')} A</label>
+                                    <input type="text" id="circunferencia-a-agregar" placeholder="12.0&quot;">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('circumference')} B</label>
+                                    <input type="text" id="circunferencia-b-agregar" placeholder="8.0&quot;">
                                 </div>
                                 <div class="form-group">
                                     <label>${t('thickness')}</label>
@@ -2061,9 +2069,14 @@
                                     <label>${t('length')}</label>
                                     <input type="text" id="longitud-agregar" placeholder="20 pies">
                                 </div>
+                            </div>
+                            <div class="form-grid cols-2">
                                 <div class="form-group">
                                     <label>${t('weight_optional')}</label>
                                     <input type="text" id="peso-agregar" placeholder="500 kg">
+                                </div>
+                                <div class="form-group">
+                                    <!-- Campo vacío para balance visual -->
                                 </div>
                             </div>
                         </div>
@@ -2079,6 +2092,7 @@
                                     <label>${t('unit_measure')}</label>
                                     <select id="unidad-agregar" required>
                                         <option value="pies lineales">${t('linear_feet')}</option>
+                                        <option value="pulgadas">${t('inches')}</option>
                                         <option value="piezas">${t('pieces')}</option>
                                         <option value="metros">${t('meters')}</option>
                                         <option value="kilogramos">${t('kilograms')}</option>
@@ -2228,7 +2242,8 @@
                 }
 
                 // Configurar campo de circunferencia para conversión fraccionaria
-                this.configurarCampoCircunferencia(document.getElementById('circunferencia-agregar'));
+                this.configurarCampoCircunferencia(document.getElementById('circunferencia-a-agregar'));
+                this.configurarCampoCircunferencia(document.getElementById('circunferencia-b-agregar'));
             }
 
             configurarEventListenersDespachar() {
@@ -2316,6 +2331,7 @@
                                     <label>${t('unit_measure')}</label>
                                     <select id="unidad-editar" required>
                                         <option value="pies lineales" ${material.unidad === 'pies lineales' ? 'selected' : ''}>${t('linear_feet')}</option>
+                                        <option value="pulgadas" ${material.unidad === 'pulgadas' ? 'selected' : ''}>${t('inches')}</option>
                                         <option value="piezas" ${material.unidad === 'piezas' ? 'selected' : ''}>${t('pieces')}</option>
                                         <option value="metros" ${material.unidad === 'metros' ? 'selected' : ''}>${t('meters')}</option>
                                         <option value="kilogramos" ${material.unidad === 'kilogramos' ? 'selected' : ''}>${t('kilograms')}</option>
@@ -2382,8 +2398,12 @@
                             <h4>${t('technical_specs')}</h4>
                             <div class="form-grid cols-4">
                                 <div class="form-group">
-                                    <label>${t('circumference')}</label>
-                                    <input type="text" id="circunferencia-editar" value="${material.circunferencia ? this.decimalAFraccion(material.circunferencia) + '"' : ''}" placeholder="12″">
+                                    <label>${t('circumference')} A</label>
+                                    <input type="text" id="circunferencia-a-editar" value="${material.circunferencia ? this.decimalAFraccion(material.circunferencia) + '"' : ''}" placeholder="12″">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('circumference')} B</label>
+                                    <input type="text" id="circunferencia-b-editar" value="${material.circunferencia_b ? this.decimalAFraccion(material.circunferencia_b) + '"' : ''}" placeholder="8″">
                                 </div>
                                 <div class="form-group">
                                     <label>${t('thickness')}</label>
@@ -2393,9 +2413,14 @@
                                     <label>${t('length')}</label>
                                     <input type="text" id="longitud-editar" value="" placeholder="20 pies">
                                 </div>
+                            </div>
+                            <div class="form-grid cols-2">
                                 <div class="form-group">
                                     <label>${t('weight_optional')}</label>
                                     <input type="text" id="peso-editar" value="" placeholder="500 kg">
+                                </div>
+                                <div class="form-group">
+                                    <!-- Campo vacío para balance visual -->
                                 </div>
                             </div>
                         </div>
@@ -2433,7 +2458,8 @@
 
                 // Configurar campo de circunferencia para conversión fraccionaria
                 setTimeout(() => {
-                    this.configurarCampoCircunferencia(document.getElementById('circunferencia-editar'));
+                    this.configurarCampoCircunferencia(document.getElementById('circunferencia-a-editar'));
+                    this.configurarCampoCircunferencia(document.getElementById('circunferencia-b-editar'));
                 }, 100);
             }
 
@@ -2504,20 +2530,23 @@
 
                     const tipo = document.getElementById('tipo-editar').value.trim() || 'Material';
                     const proveedor = document.getElementById('proveedor-editar').value.trim() || 'Sin especificar';
-                    const circunfInput = document.getElementById('circunferencia-editar').value.trim();
+                    const circunfAInput = document.getElementById('circunferencia-a-editar').value.trim();
+                    const circunfBInput = document.getElementById('circunferencia-b-editar').value.trim();
                     const espesor = document.getElementById('espesor-editar').value.trim();
                     const longitud = document.getElementById('longitud-editar').value.trim();
                     const peso = document.getElementById('peso-editar').value.trim();
                     const cantidad = parseInt(document.getElementById('cantidad-editar').value) || 0;
                     const unidad = document.getElementById('unidad-editar').value || 'unidades';
 
-                    // Convertir circunferencia fraccionaria a decimal para almacenamiento
-                    const circunf = this.fraccionADecimal(circunfInput.replace(/"/g, ''));
+                    // Convertir circunferencias fraccionarias a decimal para almacenamiento
+                    const circunfA = this.fraccionADecimal(circunfAInput.replace(/"/g, ''));
+                    const circunfB = this.fraccionADecimal(circunfBInput.replace(/"/g, ''));
 
                     let descripcion = tipo;
-                    if (circunf && espesor) {
-                        const circunfDisplay = this.decimalAFraccion(circunf);
-                        descripcion += ` - ${circunfDisplay}″ ⌀ × ${espesor}″`;
+                    if (circunfA && espesor) {
+                        const circunfADisplay = this.decimalAFraccion(circunfA);
+                        const circunfBDisplay = circunfB ? ' × ' + this.decimalAFraccion(circunfB) : '';
+                        descripcion += ` - ${circunfADisplay}${circunfBDisplay}″ ⌀ × ${espesor}″`;
                         if (longitud) descripcion += ` × ${longitud}`;
                         if (peso) descripcion += ` (${peso})`;
                     }
@@ -2528,7 +2557,8 @@
                             .from('materiales')
                             .update({
                                 tipo: tipo,
-                                circunferencia: circunf || null,
+                                circunferencia: circunfA || null,
+                                circunferencia_b: circunfB || null,
                                 espesor: espesor || null,
                                 cantidad: cantidad,
                                 unidad: unidad,
@@ -2542,7 +2572,8 @@
 
                     // Actualizar inventario local
                     material.tipo = tipo;
-                    material.circunferencia = circunf || null;
+                    material.circunferencia = circunfA || null;
+                    material.circunferencia_b = circunfB || null;
                     material.espesor = espesor || null;
                     material.cantidad = cantidad;
                     material.unidad = unidad;
@@ -2686,22 +2717,25 @@
                     const nombrePallet = document.getElementById('nombre-pallet-nuevo').value.trim();
                     const tipo = document.getElementById('tipo-material-nuevo').value.trim() || 'Material';
                     const proveedor = document.getElementById('proveedor-nuevo').value.trim() || 'Sin especificar';
-                    const circunfInput = document.getElementById('circunferencia-nuevo').value.trim();
+                    const circunfAInput = document.getElementById('circunferencia-a-nuevo').value.trim();
+                    const circunfBInput = document.getElementById('circunferencia-b-nuevo').value.trim();
                     const espesor = document.getElementById('espesor-nuevo').value.trim();
                     const longitud = document.getElementById('longitud-nuevo').value.trim();
                     const peso = document.getElementById('peso-nuevo').value.trim();
                     const cantidad = parseInt(document.getElementById('cantidad-nuevo').value) || 1;
                     const unidad = document.getElementById('unidad-nuevo').value || 'unidades';
 
-                    // Convertir circunferencia fraccionaria a decimal para almacenamiento
-                    const circunf = this.fraccionADecimal(circunfInput.replace(/"/g, ''));
+                    // Convertir circunferencias fraccionarias a decimal para almacenamiento
+                    const circunfA = this.fraccionADecimal(circunfAInput.replace(/"/g, ''));
+                    const circunfB = this.fraccionADecimal(circunfBInput.replace(/"/g, ''));
 
                     const numeroAsignado = await this.obtenerProximoNumero();
                     
                     let descripcion = tipo;
-                    if (circunf && espesor) {
-                        const circunfDisplay = this.decimalAFraccion(circunf);
-                        descripcion += ` - ${circunfDisplay}″ ⌀ × ${espesor}″`;
+                    if (circunfA && espesor) {
+                        const circunfADisplay = this.decimalAFraccion(circunfA);
+                        const circunfBDisplay = circunfB ? ' × ' + this.decimalAFraccion(circunfB) : '';
+                        descripcion += ` - ${circunfADisplay}${circunfBDisplay}″ ⌀ × ${espesor}″`;
                         if (longitud) descripcion += ` × ${longitud}`;
                         if (peso) descripcion += ` (${peso})`;
                     }
@@ -2726,7 +2760,8 @@
                             .insert({
                                 pallet_id: palletData.id,
                                 tipo: tipo,
-                                circunferencia: circunf || null,
+                                circunferencia: circunfA || null,
+                                circunferencia_b: circunfB || null,
                                 espesor: espesor || null,
                                 cantidad: cantidad,
                                 unidad: unidad,
@@ -2747,7 +2782,8 @@
                         materiales: [{
                             id: this.isOnline ? 'db_id' : 'local_' + Date.now(),
                             tipo: tipo,
-                            circunferencia: circunf || null,
+                            circunferencia: circunfA || null,
+                            circunferencia_b: circunfB || null,
                             espesor: espesor || null,
                             cantidad: cantidad,
                             unidad: unidad,
@@ -2778,7 +2814,8 @@
                 try {
                     const tipo = document.getElementById('tipo-agregar').value.trim() || 'Material';
                     const proveedor = document.getElementById('proveedor-agregar').value.trim() || 'Sin especificar';
-                    const circunf = document.getElementById('circunferencia-agregar').value.trim();
+                    const circunfA = document.getElementById('circunferencia-a-agregar').value.trim();
+                    const circunfB = document.getElementById('circunferencia-b-agregar').value.trim();
                     const espesor = document.getElementById('espesor-agregar').value.trim();
                     const longitud = document.getElementById('longitud-agregar').value.trim();
                     const peso = document.getElementById('peso-agregar').value.trim();
@@ -2795,8 +2832,9 @@
                         if (palletError) throw palletError;
 
                         let descripcion = tipo;
-                        if (circunf && espesor) {
-                            descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
+                        if (circunfA && espesor) {
+                            const circunfBDisplay = circunfB ? ' × ' + circunfB : '';
+                            descripcion += ` - ${circunfA}${circunfBDisplay}″ ⌀ × ${espesor}″`;
                             if (longitud) descripcion += ` × ${longitud}`;
                             if (peso) descripcion += ` (${peso})`;
                         }
@@ -2806,7 +2844,8 @@
                             .insert({
                                 pallet_id: palletData.id,
                                 tipo: tipo,
-                                circunferencia: circunf || null,
+                                circunferencia: circunfA || null,
+                                circunferencia_b: circunfB || null,
                                 espesor: espesor || null,
                                 cantidad: cantidad,
                                 unidad: unidad,
@@ -2821,8 +2860,9 @@
                     }
 
                     let descripcion = tipo;
-                    if (circunf && espesor) {
-                        descripcion += ` - ${circunf}″ ⌀ × ${espesor}″`;
+                    if (circunfA && espesor) {
+                        const circunfBDisplay = circunfB ? ' × ' + circunfB : '';
+                        descripcion += ` - ${circunfA}${circunfBDisplay}″ ⌀ × ${espesor}″`;
                         if (longitud) descripcion += ` × ${longitud}`;
                         if (peso) descripcion += ` (${peso})`;
                     }
@@ -2830,7 +2870,8 @@
                     this.inventario[this.palletActual].materiales.push({
                         id: 'local_' + Date.now(),
                         tipo: tipo,
-                        circunferencia: circunf || null,
+                        circunferencia: circunfA || null,
+                        circunferencia_b: circunfB || null,
                         espesor: espesor || null,
                         cantidad: cantidad,
                         unidad: unidad,
