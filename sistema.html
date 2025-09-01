@@ -286,6 +286,43 @@
             background: var(--light-grey);
         }
 
+        /* MÓVILES: Solo scroll vertical, contenido centrado */
+        @media (max-width: 768px) {
+            .warehouse {
+                height: calc(100vh - 140px);
+                margin: 5px;
+                overflow-x: hidden;
+                overflow-y: auto;
+                touch-action: pan-y;
+            }
+            
+            .warehouse-canvas {
+                width: 100% !important;
+                min-width: calc(100vw - 20px);
+                max-width: calc(100vw - 20px);
+                height: auto;
+                min-height: 1200px;
+                background-size: 30px 30px;
+                background-position: 0 0, 15px 15px;
+            }
+            
+            .warehouse::-webkit-scrollbar {
+                width: 6px;
+                height: 0px;
+            }
+            
+            .warehouse::-webkit-scrollbar-track {
+                background: var(--light-grey);
+                border-radius: 3px;
+            }
+            
+            .warehouse::-webkit-scrollbar-thumb {
+                background: var(--crimson);
+                border-radius: 3px;
+                border: 1px solid var(--light-grey);
+            }
+        }
+
         .pallet {
             width: 40px;
             height: 40px;
@@ -1361,12 +1398,88 @@
                     this.configurarSistemaArrastre();
                     this.configurarSincronizacion();
                     this.configurarRespaldoAutomatico();
+                    this.configurarWarehouseResponsivo();
                     this.actualizarEstadisticas();
                     console.log('Sistema enterprise completamente inicializado');
                 } catch (error) {
                     console.error('Error crítico en inicialización:', error);
                     this.mostrarNotificacion(t('connection_error') + ' ' + error.message, 'error');
                 }
+            }
+
+            // === SISTEMA RESPONSIVO ENTERPRISE ===
+            
+            esMobile() {
+                return window.innerWidth <= 768;
+            }
+
+            configurarWarehouseResponsivo() {
+                const self = this;
+                
+                // Ajustar al cargar
+                this.ajustarWarehouseMobile();
+                
+                // Ajustar al cambiar orientación/tamaño
+                window.addEventListener('resize', function() {
+                    setTimeout(() => {
+                        self.ajustarWarehouseMobile();
+                        self.repositionarPalletsMoviles();
+                    }, 100);
+                }, { passive: true });
+                
+                window.addEventListener('orientationchange', function() {
+                    setTimeout(() => {
+                        self.ajustarWarehouseMobile();
+                        self.repositionarPalletsMoviles();
+                    }, 300);
+                }, { passive: true });
+                
+                console.log('Sistema responsivo enterprise configurado');
+            }
+
+            ajustarWarehouseMobile() {
+                const canvas = document.getElementById('warehouse-canvas');
+                const warehouse = document.getElementById('warehouse');
+                
+                if (!canvas || !warehouse) return;
+                
+                if (this.esMobile()) {
+                    // MÓVIL: Ajustar al ancho de pantalla exacto
+                    const anchoDisponible = warehouse.clientWidth - 20; // 10px padding cada lado
+                    canvas.style.width = anchoDisponible + 'px';
+                    canvas.style.minHeight = '1200px';
+                    
+                    console.log(`Warehouse móvil ajustado: ${anchoDisponible}px de ancho`);
+                } else {
+                    // DESKTOP: Restaurar tamaño completo
+                    canvas.style.width = '3000px';
+                    canvas.style.height = '2000px';
+                }
+            }
+
+            repositionarPalletsMoviles() {
+                if (!this.esMobile()) return;
+                
+                const canvas = document.getElementById('warehouse-canvas');
+                const anchoCanvas = canvas.clientWidth;
+                
+                // Repositionar pallets que están fuera del ancho en móviles
+                Object.keys(this.inventario).forEach(palletId => {
+                    const datos = this.inventario[palletId];
+                    const elemento = document.querySelector(`[data-pallet="${palletId}"]`);
+                    
+                    if (elemento && datos.posicion.x > anchoCanvas - 50) {
+                        // Reposicionar dentro del área visible
+                        const nuevaX = Math.max(10, anchoCanvas - 60);
+                        elemento.style.left = nuevaX + 'px';
+                        
+                        // Actualizar posición guardada
+                        datos.posicion.x = nuevaX;
+                        this.guardarPosicionPallet(palletId, nuevaX, datos.posicion.y);
+                        
+                        console.log(`Pallet P${palletId} reposicionado para móvil: x=${nuevaX}`);
+                    }
+                });
             }
 
             // === SISTEMA DE RESPALDO AUTOMÁTICO ===
@@ -1905,7 +2018,6 @@
                 
                 const canvas = document.getElementById('warehouse-canvas');
                 const warehouse = document.getElementById('warehouse');
-                const canvasRect = canvas.getBoundingClientRect();
                 const warehouseRect = warehouse.getBoundingClientRect();
                 
                 // Calcular posición relativa al canvas, considerando el scroll del warehouse
@@ -1915,9 +2027,19 @@
                 const newX = clientX - warehouseRect.left + scrollX - this.arrastre.offsetX;
                 const newY = clientY - warehouseRect.top + scrollY - this.arrastre.offsetY;
                 
-                // Limitar a los bordes del canvas
-                const limitedX = Math.max(10, Math.min(newX, canvas.offsetWidth - 50));
-                const limitedY = Math.max(10, Math.min(newY, canvas.offsetHeight - 50));
+                // Límites dinámicos según dispositivo
+                let limitedX, limitedY;
+                
+                if (this.esMobile()) {
+                    // En móviles: limitar al ancho de pantalla disponible
+                    const anchoDisponible = canvas.clientWidth;
+                    limitedX = Math.max(10, Math.min(newX, anchoDisponible - 50));
+                    limitedY = Math.max(10, newY); // Sin límite superior en móviles
+                } else {
+                    // En desktop: límites del canvas completo
+                    limitedX = Math.max(10, Math.min(newX, canvas.offsetWidth - 50));
+                    limitedY = Math.max(10, Math.min(newY, canvas.offsetHeight - 50));
+                }
                 
                 this.arrastre.elemento.style.left = limitedX + 'px';
                 this.arrastre.elemento.style.top = limitedY + 'px';
@@ -2082,6 +2204,9 @@
                 canvas.innerHTML = '';
                 const self = this;
 
+                // Ajustar canvas para móviles antes de renderizar
+                this.ajustarWarehouseMobile();
+
                 Object.keys(this.inventario).forEach(function(palletId) {
                     const datos = self.inventario[palletId];
                     
@@ -2094,6 +2219,11 @@
                         self.crearPalletVisual(palletId, datos.posicion.x, datos.posicion.y, 'empty');
                     }
                 });
+
+                // Reposicionar pallets para móviles después de renderizar
+                setTimeout(() => {
+                    this.repositionarPalletsMoviles();
+                }, 100);
 
                 console.log('TODOS los pallets renderizados:', Object.keys(this.inventario).length);
                 console.log('Números ocupados:', Object.keys(this.inventario).sort((a,b) => parseInt(a) - parseInt(b)));
