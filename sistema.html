@@ -236,21 +236,54 @@
         .warehouse {
             background: var(--white);
             position: relative;
-            min-height: calc(200vh - 64px);
+            height: calc(100vh - 120px);
             margin: 20px;
             border-radius: 16px;
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
             border: 2px solid var(--light-grey);
+            overflow: auto;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            touch-action: auto;
+        }
+
+        .warehouse-canvas {
+            position: relative;
+            width: 3000px;
+            height: 2000px;
             background-image: 
                 radial-gradient(circle at 25px 25px, var(--medium-grey) 2px, transparent 0),
                 radial-gradient(circle at 75px 75px, var(--medium-grey) 2px, transparent 0);
             background-size: 50px 50px;
             background-position: 0 0, 25px 25px;
-            overflow: visible;
-            touch-action: pan-x pan-y;
-            overscroll-behavior: contain;
-            transform-origin: center center;
-            transition: transform 0.1s ease-out;
+            min-height: 100%;
+        }
+
+        .warehouse::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        .warehouse::-webkit-scrollbar-track {
+            background: var(--light-grey);
+            border-radius: 8px;
+            border: 1px solid var(--medium-grey);
+        }
+
+        .warehouse::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--crimson), #a50d26);
+            border-radius: 8px;
+            border: 2px solid var(--light-grey);
+            min-height: 50px;
+        }
+
+        .warehouse::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #a50d26, var(--steel));
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        }
+
+        .warehouse::-webkit-scrollbar-corner {
+            background: var(--light-grey);
         }
 
         .pallet {
@@ -737,8 +770,14 @@
             }
             
             .warehouse {
-                min-height: calc(200vh - 300px);
-                touch-action: pan-x pan-y;
+                height: calc(100vh - 200px);
+                touch-action: auto;
+                margin: 10px;
+            }
+            
+            .warehouse-canvas {
+                width: 2500px;
+                height: 1800px;
             }
             
             .form-grid.cols-3 { grid-template-columns: 1fr 1fr; }
@@ -799,13 +838,20 @@
                 height: 32px;
             }
 
-            body {
-                touch-action: pan-y;
+            .warehouse {
+                height: calc(100vh - 140px);
+                margin: 5px;
+                touch-action: auto;
             }
             
-            .warehouse {
-                touch-action: pan-y;
-                margin: 10px;
+            .warehouse-canvas {
+                width: 2000px;
+                height: 1500px;
+            }
+            
+            .warehouse::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
             }
         }
 
@@ -904,7 +950,9 @@
                 <div id="contenido-resultados"></div>
             </div>
 
-            <div class="warehouse scrollable-area" id="warehouse"></div>
+            <div class="warehouse scrollable-area" id="warehouse">
+                <div class="warehouse-canvas" id="warehouse-canvas"></div>
+            </div>
         </div>
     </div>
 
@@ -1201,16 +1249,6 @@
                     startX: 0,
                     startY: 0,
                     hasMoved: false
-                };
-
-                this.pan = {
-                    x: 0,
-                    y: 0,
-                    isDragging: false,
-                    startX: 0,
-                    startY: 0,
-                    initialX: 0,
-                    initialY: 0
                 };
                 
                 console.log('Sistema enterprise inicializado');
@@ -1750,48 +1788,27 @@
             configurarSistemaArrastre() {
                 const self = this;
                 
-                // Arrastre con mouse
+                // Arrastre con mouse - solo pallets
                 document.addEventListener('mousemove', function(e) {
                     if (self.arrastre.activo && self.arrastre.dragStarted) {
                         self.procesarMovimiento(e.clientX, e.clientY);
-                    } else if (self.pan.isDragging) {
-                        self.procesarPan(e.clientX, e.clientY);
                     }
                 }, { passive: true });
                 
                 document.addEventListener('mouseup', function(e) {
                     if (self.arrastre.activo) {
                         self.finalizarArrastre();
-                    } else if (self.pan.isDragging) {
-                        self.finalizarPan();
                     }
                 }, { passive: true });
 
-                // Mouse down en warehouse para iniciar pan
-                const warehouse = document.getElementById('warehouse');
-                warehouse.addEventListener('mousedown', function(e) {
-                    const element = document.elementFromPoint(e.clientX, e.clientY);
-                    
-                    if (!element || !element.classList.contains('pallet')) {
-                        // Click en área vacía - iniciar pan del warehouse
-                        self.iniciarPan(e.clientX, e.clientY);
-                        e.preventDefault();
-                    }
-                }, { passive: false });
-
-                // Arrastre touch optimizado con soporte para pan limitado
+                // Touch optimizado solo para pallets
                 document.addEventListener('touchstart', function(e) {
-                    if (e.touches.length === 1 && !self.zoom?.isZooming) {
-                        // Un dedo - determinar si es pallet o warehouse
+                    if (e.touches.length === 1) {
                         const touch = e.touches[0];
                         const element = document.elementFromPoint(touch.clientX, touch.clientY);
-                        const warehouse = document.getElementById('warehouse');
-                        
-                        // Verificar si el touch está dentro del área del warehouse
-                        const isInsideWarehouse = warehouse && warehouse.contains(element);
                         
                         if (element && element.classList.contains('pallet') && !element.classList.contains('temporal')) {
-                            // Arrastre de pallet
+                            // Solo arrastre de pallets
                             self.arrastre.startX = touch.clientX;
                             self.arrastre.startY = touch.clientY;
                             self.arrastre.touchStartTime = Date.now();
@@ -1799,68 +1816,51 @@
                             self.arrastre.potentialPalletId = element.dataset.pallet;
                             self.arrastre.dragStarted = false;
                             self.arrastre.hasMoved = false;
-                        } else if (isInsideWarehouse) {
-                            // Solo iniciar pan si está dentro del warehouse
-                            self.iniciarPan(touch.clientX, touch.clientY);
                         }
                     }
                 }, { passive: true });
                 
                 document.addEventListener('touchmove', function(e) {
-                    if (e.touches.length === 1) {
+                    if (e.touches.length === 1 && self.arrastre.potentialElement) {
                         const touch = e.touches[0];
+                        const deltaX = Math.abs(touch.clientX - self.arrastre.startX);
+                        const deltaY = Math.abs(touch.clientY - self.arrastre.startY);
+                        const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
                         
-                        if (self.arrastre.potentialElement && !self.zoom?.isZooming) {
-                            // Arrastre de pallet
-                            const deltaX = Math.abs(touch.clientX - self.arrastre.startX);
-                            const deltaY = Math.abs(touch.clientY - self.arrastre.startY);
-                            const totalMovement = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-                            
-                            if (totalMovement > 5 && !self.arrastre.dragStarted) {
-                                e.preventDefault();
-                                self.arrastre.dragStarted = true;
-                                self.arrastre.hasMoved = true;
-                                self.iniciarArrastre(
-                                    self.arrastre.potentialElement, 
-                                    self.arrastre.potentialPalletId, 
-                                    touch.clientX, 
-                                    touch.clientY
-                                );
-                            } else if (self.arrastre.dragStarted) {
-                                e.preventDefault();
-                                self.arrastre.hasMoved = true;
-                                self.procesarMovimiento(touch.clientX, touch.clientY);
-                            }
-                        } else if (self.pan.isDragging) {
-                            // Pan del warehouse con límites
+                        if (totalMovement > 8 && !self.arrastre.dragStarted) {
                             e.preventDefault();
-                            self.procesarPan(touch.clientX, touch.clientY);
+                            self.arrastre.dragStarted = true;
+                            self.arrastre.hasMoved = true;
+                            self.iniciarArrastre(
+                                self.arrastre.potentialElement, 
+                                self.arrastre.potentialPalletId, 
+                                touch.clientX, 
+                                touch.clientY
+                            );
+                        } else if (self.arrastre.dragStarted) {
+                            e.preventDefault();
+                            self.arrastre.hasMoved = true;
+                            self.procesarMovimiento(touch.clientX, touch.clientY);
                         }
                     }
                 }, { passive: false });
                 
                 document.addEventListener('touchend', function(e) {
                     if (self.arrastre.dragStarted) {
-                        // Finalizar arrastre de pallet
                         self.finalizarArrastre();
-                    } else if (self.pan.isDragging) {
-                        // Finalizar pan
-                        self.finalizarPan();
-                    } else if (self.arrastre.potentialElement && !self.arrastre.hasMoved && !self.zoom?.isZooming) {
-                        // Click/tap en pallet sin movimiento
+                    } else if (self.arrastre.potentialElement && !self.arrastre.hasMoved) {
                         const timeDelta = Date.now() - self.arrastre.touchStartTime;
-                        if (timeDelta < 200) {
+                        if (timeDelta < 250) {
                             self.abrirModalGestion(self.arrastre.potentialPalletId);
                         }
                     }
                     
-                    // Reset del estado
                     if (e.touches.length === 0) {
                         self.cancelarEstados();
                     }
                 }, { passive: true });
                 
-                console.log('Sistema completo: arrastre pallets + pan warehouse configurado con límites');
+                console.log('Sistema enterprise: arrastre optimizado configurado');
             }
 
             cancelarEstados() {
@@ -1870,63 +1870,12 @@
                 this.arrastre.hasMoved = false;
             }
 
-            iniciarPan(clientX, clientY) {
-                this.pan.isDragging = true;
-                this.pan.startX = clientX;
-                this.pan.startY = clientY;
-                this.pan.initialX = this.pan.x;
-                this.pan.initialY = this.pan.y;
-                document.body.style.cursor = 'grabbing';
-                console.log('Pan iniciado del warehouse');
-            }
-
-            procesarPan(clientX, clientY) {
-                if (!this.pan.isDragging) return;
-                
-                const deltaX = clientX - this.pan.startX;
-                const deltaY = clientY - this.pan.startY;
-                
-                // Calcular nueva posición con límites
-                let newX = this.pan.initialX + deltaX;
-                let newY = this.pan.initialY + deltaY;
-                
-                // Obtener dimensiones del warehouse
-                const warehouse = document.getElementById('warehouse');
-                if (warehouse) {
-                    const rect = warehouse.getBoundingClientRect();
-                    
-                    // Límites de pan: no más de 200px en cualquier dirección desde la posición original
-                    const maxPan = 200;
-                    
-                    // Aplicar límites
-                    newX = Math.max(-maxPan, Math.min(maxPan, newX));
-                    newY = Math.max(-maxPan, Math.min(maxPan, newY));
-                    
-                    this.pan.x = newX;
-                    this.pan.y = newY;
-                    
-                    this.aplicarTransformWarehouse();
-                }
-            }
-
-            finalizarPan() {
-                this.pan.isDragging = false;
-                document.body.style.cursor = '';
-                console.log('Pan finalizado - nueva posición:', this.pan.x, this.pan.y);
-            }
-
-            aplicarTransformWarehouse() {
-                const warehouse = document.getElementById('warehouse');
-                if (warehouse) {
-                    warehouse.style.transform = `translate(${this.pan.x}px, ${this.pan.y}px)`;
-                }
-            }
-
             iniciarArrastre(elemento, palletId, clientX, clientY) {
                 if (palletId === 'temporal') return false;
                 
+                const canvas = document.getElementById('warehouse-canvas');
                 const warehouse = document.getElementById('warehouse');
-                const warehouseRect = warehouse.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
                 const elementRect = elemento.getBoundingClientRect();
                 
                 this.arrastre = {
@@ -1937,14 +1886,15 @@
                     offsetX: clientX - elementRect.left,
                     offsetY: clientY - elementRect.top,
                     posicionInicial: {
-                        x: elementRect.left - warehouseRect.left,
-                        y: elementRect.top - warehouseRect.top
+                        x: parseInt(elemento.style.left) || 0,
+                        y: parseInt(elemento.style.top) || 0
                     },
                     dragStarted: true
                 };
                 
                 elemento.classList.add('dragging');
                 document.body.style.cursor = 'grabbing';
+                elemento.style.zIndex = '1000';
                 
                 console.log('Arrastre iniciado para pallet P' + palletId);
                 return true;
@@ -1953,14 +1903,21 @@
             procesarMovimiento(clientX, clientY) {
                 if (!this.arrastre.activo || !this.arrastre.dragStarted) return;
                 
+                const canvas = document.getElementById('warehouse-canvas');
                 const warehouse = document.getElementById('warehouse');
+                const canvasRect = canvas.getBoundingClientRect();
                 const warehouseRect = warehouse.getBoundingClientRect();
                 
-                const newX = clientX - warehouseRect.left - this.arrastre.offsetX;
-                const newY = clientY - warehouseRect.top - this.arrastre.offsetY;
+                // Calcular posición relativa al canvas, considerando el scroll del warehouse
+                const scrollX = warehouse.scrollLeft;
+                const scrollY = warehouse.scrollTop;
                 
-                const limitedX = Math.max(0, Math.min(newX, warehouseRect.width - 40));
-                const limitedY = Math.max(0, Math.min(newY, warehouseRect.height - 40));
+                const newX = clientX - warehouseRect.left + scrollX - this.arrastre.offsetX;
+                const newY = clientY - warehouseRect.top + scrollY - this.arrastre.offsetY;
+                
+                // Limitar a los bordes del canvas
+                const limitedX = Math.max(10, Math.min(newX, canvas.offsetWidth - 50));
+                const limitedY = Math.max(10, Math.min(newY, canvas.offsetHeight - 50));
                 
                 this.arrastre.elemento.style.left = limitedX + 'px';
                 this.arrastre.elemento.style.top = limitedY + 'px';
@@ -2119,10 +2076,10 @@
             }
 
             renderizarTodosLosPallets() {
-                const warehouse = document.getElementById('warehouse');
-                if (!warehouse) return;
+                const canvas = document.getElementById('warehouse-canvas');
+                if (!canvas) return;
 
-                warehouse.innerHTML = '';
+                canvas.innerHTML = '';
                 const self = this;
 
                 Object.keys(this.inventario).forEach(function(palletId) {
@@ -2142,16 +2099,12 @@
                 console.log('Números ocupados:', Object.keys(this.inventario).sort((a,b) => parseInt(a) - parseInt(b)));
             }
 
-            renderizarPalletsVisuales() {
-                this.renderizarTodosLosPallets();
-            }
-
             crearPalletVisual(palletId, x, y, tipo) {
-                const warehouse = document.getElementById('warehouse');
-                const warehouseRect = warehouse.getBoundingClientRect();
+                const canvas = document.getElementById('warehouse-canvas');
+                if (!canvas) return;
                 
-                const safeX = Math.max(10, Math.min(x, warehouseRect.width - 50));
-                const safeY = Math.max(10, Math.min(y, warehouseRect.height - 50));
+                const safeX = Math.max(10, Math.min(x, canvas.offsetWidth - 50));
+                const safeY = Math.max(10, Math.min(y, canvas.offsetHeight - 50));
 
                 const pallet = document.createElement('div');
                 pallet.className = 'pallet ' + tipo;
@@ -2210,7 +2163,7 @@
                     }, { passive: false });
                 }
 
-                warehouse.appendChild(pallet);
+                canvas.appendChild(pallet);
                 return pallet;
             }
 
