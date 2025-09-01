@@ -1482,6 +1482,50 @@
                 });
             }
 
+            // === SISTEMA DE BÚSQUEDA INTELIGENTE ===
+            
+            clasificarFamilia(texto) {
+                if (!texto) return null;
+                
+                const textoLimpio = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                
+                if (textoLimpio.includes('lamina') || textoLimpio.includes('plancha') || 
+                    textoLimpio.includes('chapa') || textoLimpio.includes('sheet')) {
+                    return 'LAMINA';
+                }
+                
+                if (textoLimpio.includes('strap') || textoLimpio.includes('fleje') || 
+                    textoLimpio.includes('strapas') || textoLimpio.includes('banda') || 
+                    textoLimpio.includes('zuncho')) {
+                    return 'FLEJE';
+                }
+                
+                if (textoLimpio.includes('codo') && (textoLimpio.includes('90') || textoLimpio.includes('noventa'))) {
+                    return 'CODO90';
+                }
+                
+                if (textoLimpio.includes('codo') && (textoLimpio.includes('45') || textoLimpio.includes('cuarenta'))) {
+                    return 'CODO45';
+                }
+                
+                return null;
+            }
+
+            normalizarNumero(valor) {
+                if (!valor) return null;
+                const decimal = this.fraccionADecimal(valor.toString().replace(/"/g, ''));
+                return parseFloat(decimal);
+            }
+
+            calcularProximidad(valorBuscado, valorMaterial) {
+                if (!valorBuscado || !valorMaterial) return 1000;
+                const busqueda = this.normalizarNumero(valorBuscado);
+                const material = this.normalizarNumero(valorMaterial);
+                
+                if (!busqueda || !material) return 1000;
+                return Math.abs(busqueda - material);
+            }
+
             // === SISTEMA DE RESPALDO AUTOMÁTICO ===
             
             configurarRespaldoAutomatico() {
@@ -2089,8 +2133,7 @@
                     };
                 }
             }
-
-            async guardarPosicionPallet(palletId, x, y) {
+async guardarPosicionPallet(palletId, x, y) {
                 try {
                     if (!this.supabase || !this.isOnline) {
                         if (this.inventario[palletId]) {
@@ -2840,7 +2883,11 @@
                             <div class="form-grid cols-4">
                                 <div class="form-group">
                                     <label>${t('circumference')}</label>
-                                    <input type="text" id="circunferencia-editar" value="${material.circunferencia || ''}" placeholder="12.0&quot;">
+                                    <input type="text" id="circunferencia-a-editar" value="${material.circunferencia ? this.decimalAFraccion(material.circunferencia) + '"' : ''}" placeholder="12″">
+                                </div>
+                                <div class="form-group">
+                                    <label>${t('circumference')} B</label>
+                                    <input type="text" id="circunferencia-b-editar" value="${material.circunferencia_b ? this.decimalAFraccion(material.circunferencia_b) + '"' : ''}" placeholder="8″">
                                 </div>
                                 <div class="form-group">
                                     <label>${t('thickness')}</label>
@@ -2850,9 +2897,14 @@
                                     <label>${t('length')}</label>
                                     <input type="text" id="longitud-editar" value="" placeholder="20 pies">
                                 </div>
+                            </div>
+                            <div class="form-grid cols-2">
                                 <div class="form-group">
                                     <label>${t('weight_optional')}</label>
                                     <input type="text" id="peso-editar" value="" placeholder="500 kg">
+                                </div>
+                                <div class="form-group">
+                                    <!-- Campo vacío para balance visual -->
                                 </div>
                             </div>
                         </div>
@@ -2868,7 +2920,6 @@
                                     <label>${t('unit_measure')}</label>
                                     <select id="unidad-editar" required>
                                         <option value="pies lineales" ${material.unidad === 'pies lineales' ? 'selected' : ''}>${t('linear_feet')}</option>
-                                        <option value="pulgadas" ${material.unidad === 'pulgadas' ? 'selected' : ''}>${t('inches')}</option>
                                         <option value="piezas" ${material.unidad === 'piezas' ? 'selected' : ''}>${t('pieces')}</option>
                                         <option value="metros" ${material.unidad === 'metros' ? 'selected' : ''}>${t('meters')}</option>
                                         <option value="kilogramos" ${material.unidad === 'kilogramos' ? 'selected' : ''}>${t('kilograms')}</option>
@@ -2888,6 +2939,11 @@
                         </div>
                     </div>
                 `;
+
+                // Configurar campo de circunferencia para conversión fraccionaria
+                setTimeout(() => {
+                    this.configurarCampoCircunferencia(document.getElementById('circunferencia-editar'));
+                }, 100);
             }
 
             // FUNCIONES DE EDICIÓN POR ÍNDICE (REPARADAS Y MOVIDAS AL LUGAR CORRECTO)
@@ -3869,6 +3925,50 @@
                 }
             }
 
+            // === SISTEMA DE BÚSQUEDA INTELIGENTE ===
+            
+            clasificarFamilia(texto) {
+                if (!texto) return null;
+                
+                const textoLimpio = texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                
+                if (textoLimpio.includes('lamina') || textoLimpio.includes('plancha') || 
+                    textoLimpio.includes('chapa') || textoLimpio.includes('sheet')) {
+                    return 'LAMINA';
+                }
+                
+                if (textoLimpio.includes('strap') || textoLimpio.includes('fleje') || 
+                    textoLimpio.includes('strapas') || textoLimpio.includes('banda') || 
+                    textoLimpio.includes('zuncho')) {
+                    return 'FLEJE';
+                }
+                
+                if (textoLimpio.includes('codo') && (textoLimpio.includes('90') || textoLimpio.includes('noventa'))) {
+                    return 'CODO90';
+                }
+                
+                if (textoLimpio.includes('codo') && (textoLimpio.includes('45') || textoLimpio.includes('cuarenta'))) {
+                    return 'CODO45';
+                }
+                
+                return null;
+            }
+
+            normalizarNumero(valor) {
+                if (!valor) return null;
+                const decimal = this.fraccionADecimal(valor.toString().replace(/"/g, ''));
+                return parseFloat(decimal);
+            }
+
+            calcularProximidad(valorBuscado, valorMaterial) {
+                if (!valorBuscado || !valorMaterial) return 1000;
+                const busqueda = this.normalizarNumero(valorBuscado);
+                const material = this.normalizarNumero(valorMaterial);
+                
+                if (!busqueda || !material) return 1000;
+                return Math.abs(busqueda - material);
+            }
+
             configurarSincronizacion() {
                 if (!this.supabase || !this.isOnline) return;
                 
@@ -3906,42 +4006,124 @@
                 const resultados = document.getElementById('resultados-busqueda');
                 const contenido = document.getElementById('contenido-resultados');
                 
-                const materialesEncontrados = [];
+                if (!tipo) {
+                    contenido.innerHTML = `<div style="color: var(--grey); text-align: center; padding: 20px;">Ingresa un tipo de material para buscar</div>`;
+                    resultados.style.display = 'block';
+                    return;
+                }
+                
+                // Clasificar familia del material buscado
+                const familiaBuscada = this.clasificarFamilia(tipo);
+                
+                if (!familiaBuscada) {
+                    contenido.innerHTML = `<div style="color: var(--steel); text-align: center; padding: 20px;">Material "${tipo}" no reconocido en las familias: LAMINA, CODO 90, CODO 45, FLEJE/STRAP</div>`;
+                    resultados.style.display = 'block';
+                    return;
+                }
+                
+                // Recopilar todos los materiales de la familia
+                const materialesFamilia = [];
+                const coincidenciasExactas = [];
                 
                 Object.keys(this.inventario).forEach(palletId => {
                     const pallet = this.inventario[palletId];
                     pallet.materiales.forEach(material => {
-                        let coincide = true;
+                        const familiaMaterial = this.clasificarFamilia(material.tipo);
                         
-                        if (tipo) {
-                            const tipoMaterial = (material.tipo || '').toLowerCase();
-                            const tipoBusqueda = tipo.toLowerCase();
-                            if (!tipoMaterial.includes(tipoBusqueda)) {
-                                coincide = false;
+                        if (familiaMaterial === familiaBuscada) {
+                            const materialCompleto = { ...material, palletId };
+                            
+                            // Verificar coincidencia exacta
+                            let esExacta = true;
+                            
+                            if (circunf) {
+                                const circunfBuscada = this.normalizarNumero(circunf);
+                                const circunfMaterial = this.normalizarNumero(material.circunferencia);
+                                if (!circunfMaterial || Math.abs(circunfBuscada - circunfMaterial) > 0.1) {
+                                    esExacta = false;
+                                }
                             }
-                        }
-                        
-                        if (circunf && (!material.circunferencia || material.circunferencia.toString().trim() !== circunf)) coincide = false;
-                        if (espesor && (!material.espesor || !material.espesor.toString().includes(espesor))) coincide = false;
-                        
-                        if (coincide) {
-                            materialesEncontrados.push({...material, palletId});
+                            
+                            if (espesor) {
+                                const espesorBuscado = this.normalizarNumero(espesor);
+                                const espesorMaterial = this.normalizarNumero(material.espesor);
+                                if (!espesorMaterial || Math.abs(espesorBuscado - espesorMaterial) > 0.1) {
+                                    esExacta = false;
+                                }
+                            }
+                            
+                            if (esExacta) {
+                                coincidenciasExactas.push(materialCompleto);
+                            } else {
+                                materialesFamilia.push(materialCompleto);
+                            }
                         }
                     });
                 });
                 
-                if (materialesEncontrados.length > 0) {
-                    contenido.innerHTML = materialesEncontrados.map(material => 
-                        `<div style="background: var(--white); padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--medium-grey);">
-                            <strong>Pallet P${material.palletId}</strong> - ${material.descripcion || material.tipo}<br>
-                            <small style="color: var(--grey);">Cantidad: ${material.cantidad} ${material.unidad || t('units')}</small>
-                        </div>`
-                    ).join('');
-                    resultados.style.display = 'block';
-                } else {
-                    contenido.innerHTML = `<div style="color: var(--grey); text-align: center; padding: 20px;">No se encontraron materiales</div>`;
-                    resultados.style.display = 'block';
+                // Ordenar familia por proximidad al tamaño buscado
+                if (circunf) {
+                    const circunfBuscada = this.normalizarNumero(circunf);
+                    materialesFamilia.sort((a, b) => {
+                        const proximidadA = this.calcularProximidad(circunf, a.circunferencia);
+                        const proximidadB = this.calcularProximidad(circunf, b.circunferencia);
+                        return proximidadA - proximidadB;
+                    });
                 }
+                
+                // Generar HTML de resultados
+                let html = '';
+                
+                // COINCIDENCIAS EXACTAS
+                if (coincidenciasExactas.length > 0) {
+                    html += `<div style="margin-bottom: 24px;">
+                        <h4 style="color: var(--crimson); font-weight: 700; margin-bottom: 12px; font-size: 16px;">COINCIDENCIA EXACTA</h4>`;
+                    
+                    coincidenciasExactas.forEach(material => {
+                        html += `
+                            <div style="background: var(--crimson); color: var(--white); padding: 16px; margin: 8px 0; border-radius: 8px; border: 2px solid var(--onyx);">
+                                <strong>Pallet P${material.palletId}</strong> - ${material.descripcion || material.tipo}<br>
+                                <strong>Cantidad: ${material.cantidad} ${material.unidad || 'unidades'}</strong>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                } else {
+                    // NO HAY DISPONIBLE
+                    const busquedaTexto = `${familiaBuscada} ${circunf ? circunf + '"' : ''} ${espesor ? '× ' + espesor + '"' : ''}`.trim();
+                    html += `
+                        <div style="margin-bottom: 24px;">
+                            <div style="background: var(--steel); color: var(--white); padding: 16px; border-radius: 8px; text-align: center; font-weight: 600;">
+                                No hay disponible: ${busquedaTexto}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // RESTO DE LA FAMILIA
+                if (materialesFamilia.length > 0) {
+                    html += `<div>
+                        <h4 style="color: var(--onyx); font-weight: 700; margin-bottom: 12px; font-size: 16px;">${familiaBuscada} DISPONIBLE</h4>`;
+                    
+                    materialesFamilia.forEach(material => {
+                        html += `
+                            <div style="background: var(--white); padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid var(--medium-grey);">
+                                <strong>Pallet P${material.palletId}</strong> - ${material.descripcion || material.tipo}<br>
+                                <small style="color: var(--grey);">Cantidad: ${material.cantidad} ${material.unidad || 'unidades'}</small>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                } else if (coincidenciasExactas.length === 0) {
+                    html += `<div style="color: var(--grey); text-align: center; padding: 20px;">No hay materiales de la familia ${familiaBuscada} en inventario</div>`;
+                }
+                
+                contenido.innerHTML = html;
+                resultados.style.display = 'block';
+                
+                console.log(`Búsqueda: ${tipo} - Familia: ${familiaBuscada} - Exactas: ${coincidenciasExactas.length} - Familia: ${materialesFamilia.length}`);
             }
 
             limpiarBusqueda() {
